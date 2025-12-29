@@ -1,4 +1,3 @@
-```
 import React, { useState } from 'react'
 import Login from './components/Login'
 import Game from './components/Game'
@@ -17,34 +16,34 @@ const Ornaments = () => {
   ];
 
   const confetti = Array.from({ length: 40 }).map((_, i) => ({
-    left: `${ Math.random() * 100 }% `,
-    top: `- ${ Math.random() * 20 }% `,
+    left: `${Math.random() * 100}%`,
+    top: `-${Math.random() * 20}%`,
     color: ['bg-yellow', 'bg-blue', 'bg-pink', 'bg-purple'][Math.floor(Math.random() * 4)],
-    delay: `${ Math.random() * 10 } s`,
-    duration: `${ 8 + Math.random() * 5 } s`
+    delay: `${Math.random() * 10}s`,
+    duration: `${8 + Math.random() * 5}s`
   }));
 
   return (
     <div className="background-decorations">
       {balloons.map((b, i) => (
-        <div 
-          key={`b - ${ i } `} 
-          className={`balloon ${ b.color } floating`} 
-          style={{ 
-            top: b.top, 
-            left: b.left, 
-            right: b.right, 
+        <div
+          key={`b-${i}`}
+          className={`balloon ${b.color} floating`}
+          style={{
+            top: b.top,
+            left: b.left,
+            right: b.right,
             bottom: b.bottom,
-            animationDelay: b.delay 
+            animationDelay: b.delay
           }}
         >
           <div className="balloon-inner"></div>
         </div>
       ))}
       {confetti.map((c, i) => (
-        <div 
-          key={`c - ${ i } `} 
-          className={`confetti ${ c.color } drifting`} 
+        <div
+          key={`c-${i}`}
+          className={`confetti ${c.color} drifting`}
           style={{ left: c.left, top: c.top, animationDelay: c.delay, animationDuration: c.duration }}
         />
       ))}
@@ -59,8 +58,8 @@ function App() {
     // Mock user data
     setUser({
       name: 'Ilan',
-      avatar: platform === 'fb' 
-        ? 'https://api.dicebear.com/7.x/avataaars/svg?seed=fb' 
+      avatar: platform === 'fb'
+        ? 'https://api.dicebear.com/7.x/avataaars/svg?seed=fb'
         : 'https://api.dicebear.com/7.x/avataaars/svg?seed=ig',
       platform
     })
@@ -69,7 +68,7 @@ function App() {
   return (
     <>
       <Ornaments />
-      
+
       {!user ? (
         <Login onLogin={handleLogin} />
       ) : (
