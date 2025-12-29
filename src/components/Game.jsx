@@ -53,8 +53,8 @@ const Game = ({ user }) => {
         setAnswer('');
     };
 
-    const checkAnswer = () => {
-        const userAnswer = answer.toLowerCase().trim();
+    const checkAnswerWithValue = (value) => {
+        const userAnswer = value.toLowerCase().trim();
         const correctAnswers = currentItem.answer.toLowerCase().split(',').map(a => a.trim());
 
         if (correctAnswers.includes(userAnswer)) {
@@ -63,6 +63,10 @@ const Game = ({ user }) => {
         } else {
             alert("Try again!");
         }
+    };
+
+    const checkAnswer = () => {
+        checkAnswerWithValue(answer);
     };
 
     const formatTime = (seconds) => {
@@ -148,8 +152,18 @@ const Game = ({ user }) => {
                     placeholder="Speak or type answer..."
                     value={answer}
                     onChange={(e) => setAnswer(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && checkAnswer()}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' || (e.metaKey && e.key === 'Enter')) {
+                            checkAnswer();
+                        }
+                    }}
                 />
+                <button
+                    className="btn-send"
+                    onClick={checkAnswer}
+                >
+                    ➤
+                </button>
                 <button
                     className={`btn-mic ${isListening ? 'listening' : ''}`}
                     onClick={startListening}
