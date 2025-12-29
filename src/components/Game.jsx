@@ -38,6 +38,19 @@ const Game = ({ user }) => {
         }
     }, []);
 
+    // Global Cmd+Enter listener
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.metaKey && e.key === 'Enter') {
+                e.preventDefault();
+                checkAnswer();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    });
+
     const startListening = () => {
         if (recognitionRef.current) {
             setIsListening(true);
@@ -53,9 +66,13 @@ const Game = ({ user }) => {
         setAnswer('');
     };
 
+    const normalizeAnswer = (text) => {
+        return text.toLowerCase().trim().replace(/\s+/g, '');
+    };
+
     const checkAnswerWithValue = (value) => {
-        const userAnswer = value.toLowerCase().trim();
-        const correctAnswers = currentItem.answer.toLowerCase().split(',').map(a => a.trim());
+        const userAnswer = normalizeAnswer(value);
+        const correctAnswers = currentItem.answer.split(',').map(a => normalizeAnswer(a));
 
         if (correctAnswers.includes(userAnswer)) {
             alert("Correct!");
