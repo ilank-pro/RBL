@@ -15,7 +15,6 @@ const Game = ({ user }) => {
             const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
             return () => clearTimeout(timer);
         } else {
-            // Handle time up
             handleNext();
         }
     }, [timeLeft]);
@@ -59,11 +58,15 @@ const Game = ({ user }) => {
         const correctAnswers = currentItem.answer.toLowerCase().split(',').map(a => a.trim());
 
         if (correctAnswers.includes(userAnswer)) {
-            alert("Correct! 🎉");
+            alert("Correct!");
             handleNext();
         } else {
-            alert("Try again! ❌");
+            alert("Try again!");
         }
+    };
+
+    const formatTime = (seconds) => {
+        return `0:${seconds < 10 ? '0' : ''}${seconds}`;
     };
 
     return (
@@ -72,7 +75,7 @@ const Game = ({ user }) => {
                 <div className="player-score-container">
                     <span className="player-label">YOU</span>
                     <div className="player-row">
-                        <div className="avatar-circle">
+                        <div className="avatar-circle player1">
                             <img src={user.avatar} alt="You" />
                         </div>
                         <div className="score-bar"></div>
@@ -108,7 +111,7 @@ const Game = ({ user }) => {
                         src="https://em-content.zobj.net/source/apple/354/banana_1f34c.png"
                         className="banana-handle"
                         alt="banana"
-                        style={{ left: `${currentItem['human difficulty'] ? currentItem['human difficulty'] * 15 : 45}%` }}
+                        style={{ left: `${currentItem['human difficulty'] ? parseInt(currentItem['human difficulty']) * 15 : 50}%` }}
                     />
                 </div>
                 <div className="difficulty-label">
@@ -120,9 +123,15 @@ const Game = ({ user }) => {
             <div className="timer-area">
                 <div className="timer-display">
                     <div className="clock-icon-wrapper">
-                        <img src="https://em-content.zobj.net/source/apple/354/banana_1f34c.png" className="clock-icon" alt="clock" />
+                        <svg className="clock-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="12" cy="13" r="8" stroke="#1a1a2e" strokeWidth="2" fill="none"/>
+                            <path d="M12 9V13L15 15" stroke="#1a1a2e" strokeWidth="2" strokeLinecap="round"/>
+                            <path d="M12 5V3" stroke="#1a1a2e" strokeWidth="2" strokeLinecap="round"/>
+                            <path d="M9 3H15" stroke="#1a1a2e" strokeWidth="2" strokeLinecap="round"/>
+                            <path d="M18 7L20 5" stroke="#1a1a2e" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
                     </div>
-                    0:{timeLeft < 10 ? `0${timeLeft}` : timeLeft}
+                    {formatTime(timeLeft)}
                 </div>
             </div>
 
@@ -144,7 +153,6 @@ const Game = ({ user }) => {
                 <button
                     className={`btn-mic ${isListening ? 'listening' : ''}`}
                     onClick={startListening}
-                    style={{ transform: isListening ? 'scale(1.2)' : 'none', transition: '0.2s', fontSize: '1.2rem' }}
                 >
                     {isListening ? '🛑' : '🎤'}
                 </button>
