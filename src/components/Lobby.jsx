@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 
-const Lobby = ({ user, onRoomCreated, onRoomJoined }) => {
+const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
   const [joinCode, setJoinCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
@@ -92,6 +92,10 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined }) => {
 
         {error && <div className="lobby-error">{error}</div>}
       </div>
+
+      <button className="btn-logout" onClick={onLogout}>
+        Logout
+      </button>
     </div>
   );
 };

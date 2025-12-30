@@ -259,6 +259,7 @@ function AppContent() {
             user={user}
             onRoomCreated={handleRoomCreated}
             onRoomJoined={handleRoomJoined}
+            onLogout={handleExit}
           />
         );
 

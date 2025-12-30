@@ -883,6 +883,25 @@ body {
   font-weight: 600;
 }
 
+.btn-logout {
+  margin-top: 30px;
+  padding: 10px 25px;
+  background: transparent;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-logout:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: white;
+}
+
 /* Waiting Room styles */
 .waiting-container {
   display: flex;
