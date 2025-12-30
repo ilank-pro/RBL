@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { ConvexProvider, ConvexReactClient, useMutation } from 'convex/react';
 import Login from './components/Login';
 import Lobby from './components/Lobby';
 import WaitingRoom from './components/WaitingRoom';
 import MultiplayerGame from './components/MultiplayerGame';
 import Results from './components/Results';
+import JoinRoom from './components/JoinRoom';
+import NotFound from './components/NotFound';
 import './index.css';
+
+// Need to import api
+import { api } from '../convex/_generated/api';
 
 // Initialize Convex client
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
@@ -82,15 +88,18 @@ const SCREENS = {
   WAITING: 'waiting',
   GAME: 'game',
   RESULTS: 'results',
+  JOIN: 'join',
 };
 
 function AppContent() {
+  const navigate = useNavigate();
   const [screen, setScreen] = useState(SCREENS.LOGIN);
   const [user, setUser] = useState(null);
   const [roomId, setRoomId] = useState(null);
   const [roomCode, setRoomCode] = useState(null);
   const [isHost, setIsHost] = useState(false);
   const [gameResults, setGameResults] = useState(null);
+  const [pendingRoomCode, setPendingRoomCode] = useState(null);
 
   const createUser = useMutation(api.rooms.createUser);
 
@@ -106,7 +115,7 @@ function AppContent() {
         platform: 'mock',
       });
 
-      setUser({
+      const newUser = {
         userId: userId,
         name: platform === 'fb' ? 'Player' : 'Guest',
         avatar:
@@ -114,12 +123,21 @@ function AppContent() {
             ? 'https://api.dicebear.com/7.x/avataaars/svg?seed=fb'
             : 'https://api.dicebear.com/7.x/avataaars/svg?seed=ig',
         platform,
-      });
-      setScreen(SCREENS.LOBBY);
+      };
+      setUser(newUser);
+
+      // If there's a pending room to join, navigate there
+      if (pendingRoomCode) {
+        navigate(`/join/${pendingRoomCode}`);
+        setPendingRoomCode(null);
+      } else {
+        setScreen(SCREENS.LOBBY);
+        navigate('/');
+      }
     } catch (err) {
       console.error('Login failed:', err);
       // Fallback to local-only user for development
-      setUser({
+      const newUser = {
         userId: `local-${Date.now()}`,
         name: platform === 'fb' ? 'Player' : 'Guest',
         avatar:
@@ -127,9 +145,23 @@ function AppContent() {
             ? 'https://api.dicebear.com/7.x/avataaars/svg?seed=fb'
             : 'https://api.dicebear.com/7.x/avataaars/svg?seed=ig',
         platform,
-      });
-      setScreen(SCREENS.LOBBY);
+      };
+      setUser(newUser);
+
+      if (pendingRoomCode) {
+        navigate(`/join/${pendingRoomCode}`);
+        setPendingRoomCode(null);
+      } else {
+        setScreen(SCREENS.LOBBY);
+        navigate('/');
+      }
     }
+  };
+
+  const handleNeedLogin = (roomCode) => {
+    setPendingRoomCode(roomCode);
+    setScreen(SCREENS.LOGIN);
+    navigate('/');
   };
 
   const handleRoomCreated = (newRoomId, code) => {
@@ -143,6 +175,7 @@ function AppContent() {
     setRoomId(newRoomId);
     setIsHost(false);
     setScreen(SCREENS.WAITING);
+    navigate('/');
   };
 
   const handleGameStart = (gameRoomId) => {
@@ -170,12 +203,13 @@ function AppContent() {
     setGameResults(null);
     setUser(null);
     setScreen(SCREENS.LOGIN);
+    navigate('/');
   };
 
   const renderScreen = () => {
     switch (screen) {
       case SCREENS.LOGIN:
-        return <Login onLogin={handleLogin} />;
+        return <Login onLogin={handleLogin} pendingRoomCode={pendingRoomCode} />;
 
       case SCREENS.LOBBY:
         return (
@@ -228,19 +262,28 @@ function AppContent() {
   return (
     <>
       <Ornaments />
-      {renderScreen()}
+      <Routes>
+        <Route path="/join/:roomCode" element={
+          <JoinRoom
+            user={user}
+            onRoomJoined={handleRoomJoined}
+            onNeedLogin={handleNeedLogin}
+          />
+        } />
+        <Route path="/" element={renderScreen()} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </>
   );
 }
 
-// Need to import api after convex client is created
-import { api } from '../convex/_generated/api';
-
 function App() {
   return (
-    <ConvexProvider client={convex}>
-      <AppContent />
-    </ConvexProvider>
+    <BrowserRouter>
+      <ConvexProvider client={convex}>
+        <AppContent />
+      </ConvexProvider>
+    </BrowserRouter>
   );
 }
 
