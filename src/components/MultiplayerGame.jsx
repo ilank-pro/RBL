@@ -12,12 +12,19 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiMessage, setConfettiMessage] = useState('');
   const [isWinner, setIsWinner] = useState(false);
+  const [hintRevealed, setHintRevealed] = useState(0); // 0, 1, 2 letters revealed
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [receivedEmoji, setReceivedEmoji] = useState(null);
+  const [emojiSenderName, setEmojiSenderName] = useState('');
   const recognitionRef = useRef(null);
+  const lastEmojiAtRef = useRef(null);
 
   const gameState = useQuery(api.games.getGameState, { roomId });
   const checkAnswer = useMutation(api.games.checkAnswer);
   const nextRound = useMutation(api.games.nextRound);
   const skipRound = useMutation(api.games.skipRound);
+  const sendEmojiMutation = useMutation(api.games.sendEmoji);
+  const giveUpMutation = useMutation(api.games.giveUp);
 
   const currentItem = gameState
     ? gameData[gameState.currentPuzzleIndex]
@@ -44,6 +51,8 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
       setTimeLeft(90);
       setAnswer('');
       setRoundFeedback(null);
+      setHintRevealed(0);
+      setShowEmojiPicker(false);
     }
   }, [gameState?.currentRound]);
 
@@ -92,6 +101,35 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
       }
     }
   }, [gameState?.roundWinner]);
+
+  // Handle received emoji from opponent
+  useEffect(() => {
+    if (!gameState?.lastEmoji || !gameState?.lastEmojiAt) return;
+
+    // Only show if it's from the opponent (not from ourselves)
+    const emojiFromOpponent =
+      (isHost && gameState.lastEmojiFrom === 'guest') ||
+      (!isHost && gameState.lastEmojiFrom === 'host');
+
+    // Check if this is a new emoji (different timestamp)
+    if (emojiFromOpponent && gameState.lastEmojiAt !== lastEmojiAtRef.current) {
+      lastEmojiAtRef.current = gameState.lastEmojiAt;
+
+      // Get sender's name
+      const senderName = gameState.lastEmojiFrom === 'host'
+        ? gameState.host?.name
+        : gameState.guest?.name;
+
+      setReceivedEmoji(gameState.lastEmoji);
+      setEmojiSenderName(senderName || 'Opponent');
+
+      // Hide after 5 seconds
+      setTimeout(() => {
+        setReceivedEmoji(null);
+        setEmojiSenderName('');
+      }, 5000);
+    }
+  }, [gameState?.lastEmoji, gameState?.lastEmojiAt, gameState?.lastEmojiFrom, isHost]);
 
   // Speech recognition setup
   useEffect(() => {
@@ -174,6 +212,48 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
+  const getHint = () => {
+    if (!currentItem) return '';
+    const answer = currentItem.answer.split(',')[0].trim();
+    if (hintRevealed === 0) return '';
+    return answer.slice(0, hintRevealed).toUpperCase() + '...';
+  };
+
+  const handleHint = () => {
+    if (hintRevealed < 2) {
+      setHintRevealed(hintRevealed + 1);
+    }
+  };
+
+  const handleGiveUp = async () => {
+    // Check if already gave up
+    const alreadyGaveUp = isHost ? gameState?.hostGaveUp : gameState?.guestGaveUp;
+    if (alreadyGaveUp) return;
+
+    try {
+      await giveUpMutation({ roomId, isHost });
+    } catch (err) {
+      console.error('Failed to give up:', err);
+    }
+  };
+
+  // Check if current player gave up
+  const myGaveUp = isHost ? gameState?.hostGaveUp : gameState?.guestGaveUp;
+  const opponentGaveUp = isHost ? gameState?.guestGaveUp : gameState?.hostGaveUp;
+
+  const emojis = ['😄', '😅', '🤔', '😱', '🔥', '👏', '💪', '🎉'];
+
+  const sendEmoji = async (emoji) => {
+    try {
+      await sendEmojiMutation({ roomId, emoji, isHost });
+      setRoundFeedback(`You sent ${emoji}`);
+      setTimeout(() => setRoundFeedback(null), 1500);
+    } catch (err) {
+      console.error('Failed to send emoji:', err);
+    }
+    setShowEmojiPicker(false);
+  };
+
   if (!gameState || !currentItem) {
     return (
       <div className="game-container">
@@ -218,6 +298,13 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
         </div>
       )}
 
+      {receivedEmoji && (
+        <div className="emoji-received">
+          <div className="emoji-received-icon">{receivedEmoji}</div>
+          <div className="emoji-received-text">{emojiSenderName} sent you an emoji!</div>
+        </div>
+      )}
+
       <div className="main-card-wrapper">
         <main className="main-card">
           <img
@@ -246,6 +333,21 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
         </main>
       </div>
 
+      <div className="difficulty-container">
+        <div className="banana-track">
+          <img
+            src="https://em-content.zobj.net/source/apple/354/banana_1f34c.png"
+            className="banana-handle"
+            alt="banana"
+            style={{ left: `${currentItem['human difficulty'] ? parseInt(currentItem['human difficulty']) * 15 : 50}%` }}
+          />
+        </div>
+        <div className="difficulty-label">
+          <span>EASY</span>
+          <span>HARD</span>
+        </div>
+      </div>
+
       <div className="timer-area">
         <div className="timer-display">
           <div className="clock-icon-wrapper">
@@ -257,6 +359,35 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
             </svg>
           </div>
           {formatTime(timeLeft)}
+        </div>
+      </div>
+
+      <div className="controls">
+        <button className="btn-game btn-hint" onClick={handleHint} disabled={hintRevealed >= 2}>
+          {hintRevealed > 0 ? `Hint: ${getHint()}` : 'Hint'}
+        </button>
+        <button
+          className={`btn-game btn-giveup ${myGaveUp ? 'gave-up' : ''}`}
+          onClick={handleGiveUp}
+          disabled={myGaveUp}
+        >
+          {myGaveUp
+            ? (opponentGaveUp ? 'Both Gave Up' : 'Waiting...')
+            : 'Give Up'}
+        </button>
+        <div className="emoji-container">
+          <button className="btn-game btn-emoji" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
+            Send Emoji
+          </button>
+          {showEmojiPicker && (
+            <div className="emoji-picker">
+              {emojis.map((emoji) => (
+                <button key={emoji} className="emoji-btn" onClick={() => sendEmoji(emoji)}>
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

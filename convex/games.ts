@@ -115,6 +115,8 @@ export const nextRound = mutation({
       await ctx.db.patch(args.roomId, {
         status: "finished",
         roundWinner: undefined,
+        hostGaveUp: undefined,
+        guestGaveUp: undefined,
       });
       return { gameOver: true };
     }
@@ -123,6 +125,8 @@ export const nextRound = mutation({
     await ctx.db.patch(args.roomId, {
       currentPuzzleIndex: nextIndex,
       roundWinner: undefined,
+      hostGaveUp: undefined,
+      guestGaveUp: undefined,
     });
 
     // Create new round
@@ -133,6 +137,77 @@ export const nextRound = mutation({
     });
 
     return { gameOver: false, nextPuzzleIndex: room.puzzleOrder[nextIndex] };
+  },
+});
+
+// Player gives up on current round
+export const giveUp = mutation({
+  args: {
+    roomId: v.id("rooms"),
+    isHost: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const room = await ctx.db.get(args.roomId);
+    if (!room) throw new Error("Room not found");
+    if (room.status !== "playing") throw new Error("Game not in progress");
+
+    // Mark this player as gave up
+    const updateData = args.isHost
+      ? { hostGaveUp: true }
+      : { guestGaveUp: true };
+
+    await ctx.db.patch(args.roomId, updateData);
+
+    // Check if both players gave up
+    const hostGaveUp = args.isHost ? true : room.hostGaveUp;
+    const guestGaveUp = !args.isHost ? true : room.guestGaveUp;
+
+    if (hostGaveUp && guestGaveUp) {
+      // Both gave up - move to next round
+      const rounds = await ctx.db
+        .query("rounds")
+        .withIndex("by_room", (q) => q.eq("roomId", args.roomId))
+        .collect();
+
+      const currentRound = rounds.find(
+        (r) => r.puzzleIndex === room.puzzleOrder[room.currentPuzzleIndex]
+      );
+
+      if (currentRound && !currentRound.endedAt) {
+        await ctx.db.patch(currentRound._id, {
+          endedAt: Date.now(),
+        });
+      }
+
+      const nextIndex = room.currentPuzzleIndex + 1;
+
+      if (nextIndex >= room.totalRounds) {
+        await ctx.db.patch(args.roomId, {
+          status: "finished",
+          roundWinner: undefined,
+          hostGaveUp: undefined,
+          guestGaveUp: undefined,
+        });
+        return { gaveUp: true, bothGaveUp: true, gameOver: true };
+      }
+
+      await ctx.db.patch(args.roomId, {
+        currentPuzzleIndex: nextIndex,
+        roundWinner: undefined,
+        hostGaveUp: undefined,
+        guestGaveUp: undefined,
+      });
+
+      await ctx.db.insert("rounds", {
+        roomId: args.roomId,
+        puzzleIndex: room.puzzleOrder[nextIndex],
+        startedAt: Date.now(),
+      });
+
+      return { gaveUp: true, bothGaveUp: true, gameOver: false };
+    }
+
+    return { gaveUp: true, bothGaveUp: false, gameOver: false };
   },
 });
 
@@ -168,6 +243,8 @@ export const skipRound = mutation({
       await ctx.db.patch(args.roomId, {
         status: "finished",
         roundWinner: undefined,
+        hostGaveUp: undefined,
+        guestGaveUp: undefined,
       });
       return { gameOver: true };
     }
@@ -175,6 +252,8 @@ export const skipRound = mutation({
     await ctx.db.patch(args.roomId, {
       currentPuzzleIndex: nextIndex,
       roundWinner: undefined,
+      hostGaveUp: undefined,
+      guestGaveUp: undefined,
     });
 
     await ctx.db.insert("rounds", {
@@ -211,6 +290,53 @@ export const getGameState = query({
       roundWinner: room.roundWinner,
       host: host ? { id: host._id, name: host.name, avatar: host.avatar } : null,
       guest: guest ? { id: guest._id, name: guest.name, avatar: guest.avatar } : null,
+      // Emoji data
+      lastEmoji: room.lastEmoji,
+      lastEmojiFrom: room.lastEmojiFrom,
+      lastEmojiAt: room.lastEmojiAt,
+      // Give up data
+      hostGaveUp: room.hostGaveUp,
+      guestGaveUp: room.guestGaveUp,
     };
+  },
+});
+
+// Send emoji to opponent
+export const sendEmoji = mutation({
+  args: {
+    roomId: v.id("rooms"),
+    emoji: v.string(),
+    isHost: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const room = await ctx.db.get(args.roomId);
+    if (!room) throw new Error("Room not found");
+
+    await ctx.db.patch(args.roomId, {
+      lastEmoji: args.emoji,
+      lastEmojiFrom: args.isHost ? "host" : "guest",
+      lastEmojiAt: Date.now(),
+    });
+
+    return { sent: true };
+  },
+});
+
+// Clear emoji (called after display timeout)
+export const clearEmoji = mutation({
+  args: {
+    roomId: v.id("rooms"),
+  },
+  handler: async (ctx, args) => {
+    const room = await ctx.db.get(args.roomId);
+    if (!room) throw new Error("Room not found");
+
+    await ctx.db.patch(args.roomId, {
+      lastEmoji: undefined,
+      lastEmojiFrom: undefined,
+      lastEmojiAt: undefined,
+    });
+
+    return { cleared: true };
   },
 });

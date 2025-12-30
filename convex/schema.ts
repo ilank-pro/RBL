@@ -21,6 +21,13 @@ export default defineSchema({
     roundWinner: v.optional(v.union(v.literal("host"), v.literal("guest"))),
     totalRounds: v.number(),
     createdAt: v.number(),
+    // Emoji reaction fields
+    lastEmoji: v.optional(v.string()),
+    lastEmojiFrom: v.optional(v.union(v.literal("host"), v.literal("guest"))),
+    lastEmojiAt: v.optional(v.number()),
+    // Give up fields
+    hostGaveUp: v.optional(v.boolean()),
+    guestGaveUp: v.optional(v.boolean()),
   }).index("by_code", ["code"]),
 
   rounds: defineTable({

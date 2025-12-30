@@ -525,8 +525,8 @@ body {
 
 /* Control buttons */
 .controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1.2fr;
+  display: flex;
+  justify-content: center;
   gap: 8px;
   padding: 8px 15px 10px;
   flex-shrink: 0;
@@ -542,6 +542,9 @@ body {
   text-transform: uppercase;
   transition: transform 0.15s, box-shadow 0.15s;
   letter-spacing: 0.5px;
+  min-width: 90px;
+  flex: 1;
+  max-width: 110px;
 }
 
 .btn-game:hover {
@@ -563,9 +566,115 @@ body {
   color: white;
 }
 
+.btn-giveup.gave-up {
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  color: #ccc;
+}
+
 .btn-emoji {
   background: linear-gradient(135deg, var(--accent-yellow) 0%, var(--accent-gold) 100%);
   color: var(--bg-dark);
+}
+
+.btn-game:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-game:disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.emoji-container {
+  position: relative;
+}
+
+.emoji-picker {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border: 2px solid var(--bg-dark);
+  border-radius: 12px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+}
+
+.emoji-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  font-size: 1.4rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.emoji-btn:hover {
+  background: #f0f0f0;
+  transform: scale(1.1);
+}
+
+/* Received emoji overlay */
+.emoji-received {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.85);
+  border-radius: 20px;
+  padding: 30px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  z-index: 1000;
+  animation: emojiPopIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.emoji-received-icon {
+  font-size: 5rem;
+  animation: emojiBounce 0.6s ease-in-out infinite;
+}
+
+.emoji-received-text {
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+@keyframes emojiPopIn {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes emojiBounce {
+  0%, 100% {
+    transform: scale(1) rotate(-5deg);
+  }
+  50% {
+    transform: scale(1.1) rotate(5deg);
+  }
 }
 
 /* Input area */
