@@ -8,6 +8,8 @@ import MultiplayerGame from './components/MultiplayerGame';
 import Results from './components/Results';
 import JoinRoom from './components/JoinRoom';
 import NotFound from './components/NotFound';
+import SoundControl from './components/SoundControl';
+import { AudioProvider } from './contexts/AudioContext';
 import './index.css';
 
 // Need to import api
@@ -262,6 +264,7 @@ function AppContent() {
   return (
     <>
       <Ornaments />
+      <SoundControl />
       <Routes>
         <Route path="/join/:roomCode" element={
           <JoinRoom
@@ -281,7 +284,9 @@ function App() {
   return (
     <BrowserRouter>
       <ConvexProvider client={convex}>
-        <AppContent />
+        <AudioProvider>
+          <AppContent />
+        </AudioProvider>
       </ConvexProvider>
     </BrowserRouter>
   );

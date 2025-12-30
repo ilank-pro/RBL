@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import gameData from '../data/gameData.json';
+import { useAudio } from '../contexts/AudioContext';
 
 const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
+  const { playSound, startBgMusic, stopBgMusic } = useAudio();
   const [timeLeft, setTimeLeft] = useState(90);
   const [answer, setAnswer] = useState('');
   const [isListening, setIsListening] = useState(false);
@@ -16,6 +18,7 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [receivedEmoji, setReceivedEmoji] = useState(null);
   const [emojiSenderName, setEmojiSenderName] = useState('');
+  const [gameStarted, setGameStarted] = useState(false);
   const recognitionRef = useRef(null);
   const lastEmojiAtRef = useRef(null);
 
@@ -29,6 +32,21 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
   const currentItem = gameState
     ? gameData[gameState.currentPuzzleIndex]
     : null;
+
+  // Play game start sound and start background music
+  useEffect(() => {
+    if (gameState?.status === 'playing' && !gameStarted) {
+      setGameStarted(true);
+      playSound('gameStart');
+      startBgMusic();
+    }
+
+    return () => {
+      if (gameStarted) {
+        stopBgMusic();
+      }
+    };
+  }, [gameState?.status, gameStarted]);
 
   // Timer countdown
   useEffect(() => {
@@ -59,6 +77,8 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
   // Check for game end
   useEffect(() => {
     if (gameState?.status === 'finished') {
+      stopBgMusic();
+      playSound('gameEnd');
       onGameEnd({
         hostScore: gameState.hostScore,
         guestScore: gameState.guestScore,
@@ -79,6 +99,13 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
       const winnerName = gameState.roundWinner === 'host'
         ? gameState.host?.name
         : gameState.guest?.name;
+
+      // Play sound effect
+      if (winnerIsMe) {
+        playSound('correctAnswer');
+      } else {
+        playSound('opponentCorrect');
+      }
 
       setIsWinner(winnerIsMe);
       setConfettiMessage(winnerIsMe ? 'You got this right!' : `${winnerName} guessed right!`);
@@ -114,6 +141,9 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
     // Check if this is a new emoji (different timestamp)
     if (emojiFromOpponent && gameState.lastEmojiAt !== lastEmojiAtRef.current) {
       lastEmojiAtRef.current = gameState.lastEmojiAt;
+
+      // Play emoji receive sound
+      playSound('emojiReceive');
 
       // Get sender's name
       const senderName = gameState.lastEmojiFrom === 'host'
@@ -245,6 +275,7 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
 
   const sendEmoji = async (emoji) => {
     try {
+      playSound('emojiSend');
       await sendEmojiMutation({ roomId, emoji, isHost });
       setRoundFeedback(`You sent ${emoji}`);
       setTimeout(() => setRoundFeedback(null), 1500);

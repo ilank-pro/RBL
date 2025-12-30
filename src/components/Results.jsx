@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useAudio } from '../contexts/AudioContext';
 
 const Results = ({ hostScore, guestScore, host, guest, isHost, onPlayAgain, onExit }) => {
+  const { playSound } = useAudio();
   const playerScore = isHost ? hostScore : guestScore;
   const opponentScore = isHost ? guestScore : hostScore;
   const player = isHost ? host : guest;
@@ -8,6 +10,15 @@ const Results = ({ hostScore, guestScore, host, guest, isHost, onPlayAgain, onEx
 
   const isWinner = playerScore > opponentScore;
   const isTie = playerScore === opponentScore;
+
+  // Play win/lose sound on mount
+  useEffect(() => {
+    if (isWinner) {
+      playSound('gameWon');
+    } else if (!isTie) {
+      playSound('gameLost');
+    }
+  }, []);
 
   return (
     <div className="results-container">
