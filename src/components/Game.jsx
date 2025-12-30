@@ -3,9 +3,10 @@ import gameData from '../data/gameData.json';
 
 const Game = ({ user }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [timeLeft, setTimeLeft] = useState(30);
+    const [timeLeft, setTimeLeft] = useState(90);
     const [answer, setAnswer] = useState('');
     const [isListening, setIsListening] = useState(false);
+    const [speechSupported, setSpeechSupported] = useState(true);
     const recognitionRef = useRef(null);
 
     const currentItem = gameData[currentIndex];
@@ -21,21 +22,56 @@ const Game = ({ user }) => {
 
     useEffect(() => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) {
-            recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.continuous = false;
-            recognitionRef.current.lang = 'en-US';
-
-            recognitionRef.current.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                setAnswer(transcript);
-                setIsListening(false);
-            };
-
-            recognitionRef.current.onend = () => {
-                setIsListening(false);
-            };
+        if (!SpeechRecognition) {
+            setSpeechSupported(false);
+            return;
         }
+
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+            setIsListening(true);
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = Array.from(event.results)
+                .map(result => result[0].transcript)
+                .join('');
+            setAnswer(transcript);
+
+            // If final result, stop listening
+            if (event.results[0].isFinal) {
+                setIsListening(false);
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            setIsListening(false);
+            if (event.error === 'not-allowed') {
+                alert('Microphone access denied. Please allow microphone access in your browser settings.');
+            }
+        };
+
+        recognition.onend = () => {
+            setIsListening(false);
+        };
+
+        recognitionRef.current = recognition;
+
+        return () => {
+            if (recognitionRef.current) {
+                try {
+                    recognitionRef.current.abort();
+                } catch (e) {
+                    // Ignore errors on cleanup
+                }
+            }
+        };
     }, []);
 
     // Global Cmd+Enter listener
@@ -51,18 +87,39 @@ const Game = ({ user }) => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     });
 
-    const startListening = () => {
-        if (recognitionRef.current) {
-            setIsListening(true);
-            recognitionRef.current.start();
+    const toggleListening = () => {
+        if (!recognitionRef.current) {
+            alert('Speech recognition is not supported in this browser.');
+            return;
+        }
+
+        if (isListening) {
+            try {
+                recognitionRef.current.stop();
+            } catch (e) {
+                console.error('Error stopping recognition:', e);
+            }
+            setIsListening(false);
         } else {
-            alert("Speech recognition not supported in this browser.");
+            try {
+                // Abort any existing session first
+                try {
+                    recognitionRef.current.abort();
+                } catch (e) {
+                    // Ignore
+                }
+                recognitionRef.current.start();
+            } catch (e) {
+                console.error('Error starting recognition:', e);
+                alert('Could not start speech recognition. Please try again.');
+                setIsListening(false);
+            }
         }
     };
 
     const handleNext = () => {
         setCurrentIndex((prev) => (prev + 1) % gameData.length);
-        setTimeLeft(30);
+        setTimeLeft(90);
         setAnswer('');
     };
 
@@ -87,7 +144,9 @@ const Game = ({ user }) => {
     };
 
     const formatTime = (seconds) => {
-        return `0:${seconds < 10 ? '0' : ''}${seconds}`;
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
     };
 
     return (
@@ -183,7 +242,9 @@ const Game = ({ user }) => {
                 </button>
                 <button
                     className={`btn-mic ${isListening ? 'listening' : ''}`}
-                    onClick={startListening}
+                    onClick={toggleListening}
+                    disabled={!speechSupported}
+                    style={{ opacity: speechSupported ? 1 : 0.5 }}
                 >
                     {isListening ? '🛑' : '🎤'}
                 </button>
