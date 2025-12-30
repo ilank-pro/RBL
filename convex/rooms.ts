@@ -28,9 +28,47 @@ export const createUser = mutation({
     name: v.string(),
     avatar: v.string(),
     platform: v.union(v.literal("facebook"), v.literal("instagram"), v.literal("mock")),
+    metaId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await ctx.db.insert("users", {
+      name: args.name,
+      avatar: args.avatar,
+      platform: args.platform,
+      metaId: args.metaId,
+    });
+    return userId;
+  },
+});
+
+// Get or create user by Meta ID (for Facebook/Instagram OAuth)
+export const getOrCreateUser = mutation({
+  args: {
+    metaId: v.string(),
+    name: v.string(),
+    avatar: v.string(),
+    platform: v.union(v.literal("facebook"), v.literal("instagram")),
+  },
+  handler: async (ctx, args) => {
+    // Check if user with this metaId already exists
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("by_metaId", (q) => q.eq("metaId", args.metaId))
+      .first();
+
+    if (existingUser) {
+      // Update user info in case name/avatar changed
+      await ctx.db.patch(existingUser._id, {
+        name: args.name,
+        avatar: args.avatar,
+        platform: args.platform,
+      });
+      return existingUser._id;
+    }
+
+    // Create new user
+    const userId = await ctx.db.insert("users", {
+      metaId: args.metaId,
       name: args.name,
       avatar: args.avatar,
       platform: args.platform,

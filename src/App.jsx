@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { ConvexProvider, ConvexReactClient, useMutation } from 'convex/react';
 import Login from './components/Login';
@@ -9,6 +9,9 @@ import Results from './components/Results';
 import JoinRoom from './components/JoinRoom';
 import NotFound from './components/NotFound';
 import SoundControl from './components/SoundControl';
+import PrivacyPolicy from './components/PrivacyPolicy';
+import TermsOfService from './components/TermsOfService';
+import DataDeletion from './components/DataDeletion';
 import { AudioProvider } from './contexts/AudioContext';
 import './index.css';
 
@@ -17,6 +20,9 @@ import { api } from '../convex/_generated/api';
 
 // Initialize Convex client
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL);
+
+// localStorage key for session persistence
+const USER_STORAGE_KEY = 'rbl_user';
 
 const Ornaments = () => {
   const colors = ['purple', 'blue', 'yellow', 'pink'];
@@ -102,31 +108,48 @@ function AppContent() {
   const [isHost, setIsHost] = useState(false);
   const [gameResults, setGameResults] = useState(null);
   const [pendingRoomCode, setPendingRoomCode] = useState(null);
+  const [isRestoring, setIsRestoring] = useState(true);
 
-  const createUser = useMutation(api.rooms.createUser);
+  const getOrCreateUser = useMutation(api.rooms.getOrCreateUser);
 
-  const handleLogin = async (platform) => {
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    const savedUser = localStorage.getItem(USER_STORAGE_KEY);
+    if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+        setScreen(SCREENS.LOBBY);
+      } catch (err) {
+        console.error('Failed to restore session:', err);
+        localStorage.removeItem(USER_STORAGE_KEY);
+      }
+    }
+    setIsRestoring(false);
+  }, []);
+
+  // Handle login with real Facebook data
+  const handleLogin = async (userData) => {
     try {
-      // Create user in Convex (mock auth for now)
-      const userId = await createUser({
-        name: platform === 'fb' ? 'Player' : 'Guest',
-        avatar:
-          platform === 'fb'
-            ? 'https://api.dicebear.com/7.x/avataaars/svg?seed=fb'
-            : 'https://api.dicebear.com/7.x/avataaars/svg?seed=ig',
-        platform: 'mock',
+      // userData comes from Facebook SDK: { metaId, name, avatar, platform }
+      const userId = await getOrCreateUser({
+        metaId: userData.metaId,
+        name: userData.name,
+        avatar: userData.avatar,
+        platform: userData.platform,
       });
 
       const newUser = {
         userId: userId,
-        name: platform === 'fb' ? 'Player' : 'Guest',
-        avatar:
-          platform === 'fb'
-            ? 'https://api.dicebear.com/7.x/avataaars/svg?seed=fb'
-            : 'https://api.dicebear.com/7.x/avataaars/svg?seed=ig',
-        platform,
+        metaId: userData.metaId,
+        name: userData.name,
+        avatar: userData.avatar,
+        platform: userData.platform,
       };
+
+      // Save to state and localStorage
       setUser(newUser);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
 
       // If there's a pending room to join, navigate there
       if (pendingRoomCode) {
@@ -138,17 +161,16 @@ function AppContent() {
       }
     } catch (err) {
       console.error('Login failed:', err);
-      // Fallback to local-only user for development
+      // Still allow user to proceed with the data we have
       const newUser = {
-        userId: `local-${Date.now()}`,
-        name: platform === 'fb' ? 'Player' : 'Guest',
-        avatar:
-          platform === 'fb'
-            ? 'https://api.dicebear.com/7.x/avataaars/svg?seed=fb'
-            : 'https://api.dicebear.com/7.x/avataaars/svg?seed=ig',
-        platform,
+        userId: `fb-${userData.metaId}`,
+        metaId: userData.metaId,
+        name: userData.name,
+        avatar: userData.avatar,
+        platform: userData.platform,
       };
       setUser(newUser);
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
 
       if (pendingRoomCode) {
         navigate(`/join/${pendingRoomCode}`);
@@ -204,9 +226,27 @@ function AppContent() {
     setIsHost(false);
     setGameResults(null);
     setUser(null);
+    // Clear session from localStorage
+    localStorage.removeItem(USER_STORAGE_KEY);
+    // Logout from Facebook
+    if (window.FB) {
+      window.FB.logout(() => {});
+    }
     setScreen(SCREENS.LOGIN);
     navigate('/');
   };
+
+  // Show loading while restoring session
+  if (isRestoring) {
+    return (
+      <>
+        <Ornaments />
+        <div className="auth-container">
+          <div style={{ opacity: 0.7 }}>Loading...</div>
+        </div>
+      </>
+    );
+  }
 
   const renderScreen = () => {
     switch (screen) {
@@ -273,6 +313,9 @@ function AppContent() {
             onNeedLogin={handleNeedLogin}
           />
         } />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
+        <Route path="/delete-data" element={<DataDeletion />} />
         <Route path="/" element={renderScreen()} />
         <Route path="*" element={<NotFound />} />
       </Routes>

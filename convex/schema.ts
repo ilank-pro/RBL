@@ -7,7 +7,7 @@ export default defineSchema({
     avatar: v.string(),
     platform: v.union(v.literal("facebook"), v.literal("instagram"), v.literal("mock")),
     metaId: v.optional(v.string()),
-  }),
+  }).index("by_metaId", ["metaId"]),
 
   rooms: defineTable({
     code: v.string(),

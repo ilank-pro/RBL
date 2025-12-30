@@ -1327,3 +1327,195 @@ body {
   background: rgba(0, 0, 0, 0.3);
   opacity: 0.7;
 }
+
+/* Login Footer */
+.login-footer {
+  margin-top: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.login-footer a {
+  color: white;
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+.login-footer a:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.login-footer span {
+  opacity: 0.5;
+}
+
+/* Legal Pages */
+.legal-container {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.legal-content {
+  background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  border-radius: 25px;
+  border: 3px solid var(--bg-dark);
+  padding: 40px 30px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  margin: 20px 0;
+}
+
+.legal-content h1 {
+  font-size: 1.8rem;
+  font-weight: 900;
+  margin-bottom: 10px;
+  text-align: center;
+  color: var(--accent-yellow);
+}
+
+.legal-updated {
+  text-align: center;
+  font-size: 0.85rem;
+  opacity: 0.7;
+  margin-bottom: 30px;
+}
+
+.legal-content section {
+  margin-bottom: 25px;
+}
+
+.legal-content h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--accent-yellow);
+}
+
+.legal-content p {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 10px;
+  opacity: 0.9;
+}
+
+.legal-content ul,
+.legal-content ol {
+  margin-left: 20px;
+  margin-bottom: 15px;
+}
+
+.legal-content li {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
+
+.legal-content a {
+  color: var(--accent-yellow);
+  text-decoration: none;
+}
+
+.legal-content a:hover {
+  text-decoration: underline;
+}
+
+.legal-footer {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.legal-button {
+  display: inline-block;
+  padding: 12px 30px;
+  background: linear-gradient(135deg, var(--accent-yellow) 0%, var(--accent-gold) 100%);
+  color: var(--bg-dark);
+  border: 2px solid var(--bg-dark);
+  border-radius: 25px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.legal-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  text-decoration: none;
+}
+
+/* Data Deletion Form */
+.deletion-form {
+  margin-top: 15px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  opacity: 0.9;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transition: border-color 0.2s;
+}
+
+.form-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent-yellow);
+}
+
+.delete-button {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: white;
+  border-color: var(--bg-dark);
+  margin-top: 10px;
+}
+
+.delete-button:hover {
+  background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+}
+
+.confirmation-section {
+  background: rgba(39, 174, 96, 0.2);
+  border-radius: 15px;
+  padding: 20px;
+  border: 2px solid rgba(39, 174, 96, 0.5);
+}
+
+.confirmation-message {
+  text-align: center;
+}
+
+.confirmation-message p {
+  margin-bottom: 15px;
+}
