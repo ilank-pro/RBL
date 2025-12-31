@@ -82,7 +82,7 @@ export const createRoom = mutation({
   args: {
     hostId: v.id("users"),
     totalRounds: v.number(),
-    totalPuzzles: v.number(),
+    totalPuzzles: v.optional(v.number()), // Deprecated: now fetched from DB
   },
   handler: async (ctx, args) => {
     // Generate unique room code
@@ -100,8 +100,17 @@ export const createRoom = mutation({
         .first();
     }
 
-    // Create shuffled puzzle order
-    const puzzleIndices = Array.from({ length: args.totalPuzzles }, (_, i) => i);
+    // Get active puzzles from database
+    const activePuzzles = await ctx.db
+      .query("puzzles")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .collect();
+
+    // Fallback to totalPuzzles arg if no puzzles in DB yet (for backwards compatibility)
+    const puzzleCount = activePuzzles.length > 0 ? activePuzzles.length : (args.totalPuzzles || 59);
+
+    // Create shuffled puzzle order (indices into the active puzzles array)
+    const puzzleIndices = Array.from({ length: puzzleCount }, (_, i) => i);
     const puzzleOrder = shuffleArray(puzzleIndices).slice(0, args.totalRounds);
 
     const roomId = await ctx.db.insert("rooms", {

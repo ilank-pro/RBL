@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
-import gameData from '../data/gameData.json';
+import gameData from '../data/gameData.json'; // Fallback for migration period
 import { useAudio } from '../contexts/AudioContext';
 
 const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
@@ -23,15 +23,31 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
   const lastEmojiAtRef = useRef(null);
 
   const gameState = useQuery(api.games.getGameState, { roomId });
+  const puzzles = useQuery(api.puzzles.getActivePuzzles);
   const checkAnswer = useMutation(api.games.checkAnswer);
   const nextRound = useMutation(api.games.nextRound);
   const skipRound = useMutation(api.games.skipRound);
   const sendEmojiMutation = useMutation(api.games.sendEmoji);
   const giveUpMutation = useMutation(api.games.giveUp);
 
-  const currentItem = gameState
-    ? gameData[gameState.currentPuzzleIndex]
-    : null;
+  // Get current puzzle - use database puzzles if available, fallback to static gameData
+  const getCurrentPuzzle = () => {
+    if (!gameState) return null;
+
+    // If we have puzzles from the database, use them
+    if (puzzles && puzzles.length > 0) {
+      const puzzleIndex = gameState.currentPuzzleIndex;
+      if (puzzleIndex < puzzles.length) {
+        return puzzles[puzzleIndex];
+      }
+    }
+
+    // Fallback to static gameData during migration
+    return gameData[gameState.currentPuzzleIndex];
+  };
+
+  const currentItem = getCurrentPuzzle();
+  const isUsingDatabase = puzzles && puzzles.length > 0;
 
   // Play game start sound and start background music
   useEffect(() => {
@@ -218,7 +234,16 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
     if (!answer.trim() || !currentItem) return;
 
     try {
-      const correctAnswers = currentItem.answer.split(',').map((a) => a.trim());
+      // Get correct answers - handle both database and static puzzle formats
+      let correctAnswers;
+      if (isUsingDatabase) {
+        // Database puzzle: answer + alternateAnswers
+        correctAnswers = [currentItem.answer, ...(currentItem.alternateAnswers || [])];
+      } else {
+        // Static puzzle: comma-separated string
+        correctAnswers = currentItem.answer.split(',').map((a) => a.trim());
+      }
+
       const result = await checkAnswer({
         roomId,
         playerId: user.userId,
@@ -244,9 +269,12 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
 
   const getHint = () => {
     if (!currentItem) return '';
-    const answer = currentItem.answer.split(',')[0].trim();
+    // Handle both database and static puzzle formats
+    const answerText = isUsingDatabase
+      ? currentItem.answer
+      : currentItem.answer.split(',')[0].trim();
     if (hintRevealed === 0) return '';
-    return answer.slice(0, hintRevealed).toUpperCase() + '...';
+    return answerText.slice(0, hintRevealed).toUpperCase() + '...';
   };
 
   const handleHint = () => {
@@ -339,7 +367,7 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
       <div className="main-card-wrapper">
         <main className="main-card">
           <img
-            src={`/assets/images/${currentItem.file}`}
+            src={isUsingDatabase ? currentItem.imageUrl : `/assets/images/${currentItem.file}`}
             alt="Game Challenge"
             className="game-image"
           />
@@ -370,7 +398,7 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
             src="https://em-content.zobj.net/source/apple/354/banana_1f34c.png"
             className="banana-handle"
             alt="banana"
-            style={{ left: `${currentItem['human difficulty'] ? parseInt(currentItem['human difficulty']) * 15 : 50}%` }}
+            style={{ left: `${isUsingDatabase ? (currentItem.difficulty * 20) : (currentItem['human difficulty'] ? parseInt(currentItem['human difficulty']) * 15 : 50)}%` }}
           />
         </div>
         <div className="difficulty-label">

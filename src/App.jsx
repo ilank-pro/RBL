@@ -12,6 +12,7 @@ import SoundControl from './components/SoundControl';
 import PrivacyPolicy from './components/PrivacyPolicy';
 import TermsOfService from './components/TermsOfService';
 import DataDeletion from './components/DataDeletion';
+import Admin from './components/Admin';
 import { AudioProvider } from './contexts/AudioContext';
 import './index.css';
 
@@ -317,6 +318,7 @@ function AppContent() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/delete-data" element={<DataDeletion />} />
+        <Route path="/admin" element={<Admin user={user} />} />
         <Route path="/" element={renderScreen()} />
         <Route path="*" element={<NotFound />} />
       </Routes>

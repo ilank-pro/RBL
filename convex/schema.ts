@@ -39,4 +39,25 @@ export default defineSchema({
     startedAt: v.number(),
     endedAt: v.optional(v.number()),
   }).index("by_room", ["roomId"]),
+
+  puzzles: defineTable({
+    imageId: v.optional(v.id("_storage")), // Convex file storage ID (optional for URL-based images)
+    imageUrl: v.string(), // URL for display (either from storage or external)
+    answer: v.string(), // Primary answer
+    alternateAnswers: v.array(v.string()), // Other valid answers
+    difficulty: v.number(), // 1-5
+    category: v.string(), // rebus, symbols, puzzles, sequence, Contextual, Dingbats
+    hints: v.array(
+      v.object({
+        text: v.string(),
+        score: v.number(), // 1-5 (1=small hint, 5=big hint)
+      })
+    ),
+    isActive: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_difficulty", ["difficulty"])
+    .index("by_active", ["isActive"]),
 });

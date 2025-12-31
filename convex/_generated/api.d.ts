@@ -9,6 +9,8 @@
  */
 
 import type * as games from "../games.js";
+import type * as migration from "../migration.js";
+import type * as puzzles from "../puzzles.js";
 import type * as rooms from "../rooms.js";
 
 import type {
@@ -19,6 +21,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   games: typeof games;
+  migration: typeof migration;
+  puzzles: typeof puzzles;
   rooms: typeof rooms;
 }>;
 
