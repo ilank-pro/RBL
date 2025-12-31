@@ -666,7 +666,10 @@ const ManageCards = () => {
   const puzzles = useQuery(api.puzzles.listPuzzles, {});
   const deletePuzzle = useMutation(api.puzzles.deletePuzzle);
   const toggleActive = useMutation(api.puzzles.togglePuzzleActive);
-  const [filter, setFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [difficultyFilter, setDifficultyFilter] = useState('all');
+  const [hintsFilter, setHintsFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [editingPuzzle, setEditingPuzzle] = useState(null);
 
   if (!puzzles) {
@@ -674,8 +677,26 @@ const ManageCards = () => {
   }
 
   const filteredPuzzles = puzzles.filter((p) => {
-    if (filter === 'active') return p.isActive;
-    if (filter === 'inactive') return !p.isActive;
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const matchesAnswer = p.answer.toLowerCase().includes(query);
+      const matchesAltAnswers = p.alternateAnswers.some(a => a.toLowerCase().includes(query));
+      if (!matchesAnswer && !matchesAltAnswers) return false;
+    }
+
+    // Status filter
+    if (statusFilter === 'active' && !p.isActive) return false;
+    if (statusFilter === 'inactive' && p.isActive) return false;
+
+    // Difficulty filter
+    if (difficultyFilter !== 'all' && p.difficulty !== parseInt(difficultyFilter)) return false;
+
+    // Hints filter
+    if (hintsFilter === '0' && p.hints.length !== 0) return false;
+    if (hintsFilter === '1-2' && (p.hints.length < 1 || p.hints.length > 2)) return false;
+    if (hintsFilter === '3+' && p.hints.length < 3) return false;
+
     return true;
   });
 
@@ -694,20 +715,55 @@ const ManageCards = () => {
         />
       )}
 
+      <div className="admin-search-bar">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by answer..."
+          className="admin-input admin-search-input"
+        />
+      </div>
+
       <div className="admin-manage-header">
         <div className="admin-stats">
           <span>Total: {puzzles.length}</span>
+          <span>Showing: {filteredPuzzles.length}</span>
           <span>Active: {puzzles.filter((p) => p.isActive).length}</span>
         </div>
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="admin-select small"
-        >
-          <option value="all">All</option>
-          <option value="active">Active Only</option>
-          <option value="inactive">Inactive Only</option>
-        </select>
+        <div className="admin-filters">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="admin-select small"
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active Only</option>
+            <option value="inactive">Inactive Only</option>
+          </select>
+          <select
+            value={difficultyFilter}
+            onChange={(e) => setDifficultyFilter(e.target.value)}
+            className="admin-select small"
+          >
+            <option value="all">All Difficulty</option>
+            <option value="1">Difficulty 1</option>
+            <option value="2">Difficulty 2</option>
+            <option value="3">Difficulty 3</option>
+            <option value="4">Difficulty 4</option>
+            <option value="5">Difficulty 5</option>
+          </select>
+          <select
+            value={hintsFilter}
+            onChange={(e) => setHintsFilter(e.target.value)}
+            className="admin-select small"
+          >
+            <option value="all">All Hints</option>
+            <option value="0">No Hints</option>
+            <option value="1-2">1-2 Hints</option>
+            <option value="3+">3+ Hints</option>
+          </select>
+        </div>
       </div>
 
       <div className="admin-cards-list">

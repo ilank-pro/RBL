@@ -1958,6 +1958,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
 .admin-stats {
@@ -1965,6 +1967,21 @@ body {
   gap: 15px;
   font-size: 0.9rem;
   opacity: 0.8;
+}
+
+.admin-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-search-bar {
+  margin-bottom: 15px;
+}
+
+.admin-search-input {
+  width: 100%;
+  max-width: 400px;
 }
 
 .admin-cards-list {
