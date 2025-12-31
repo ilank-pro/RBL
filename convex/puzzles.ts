@@ -48,7 +48,7 @@ export const createPuzzle = mutation({
   },
 });
 
-// Bulk create puzzles
+// Bulk create puzzles (with optional pack grouping)
 export const createPuzzles = mutation({
   args: {
     puzzles: v.array(
@@ -67,6 +67,8 @@ export const createPuzzles = mutation({
         ),
       })
     ),
+    packId: v.optional(v.string()),
+    packName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const now = Date.now();
@@ -83,6 +85,8 @@ export const createPuzzles = mutation({
         isActive: true,
         createdAt: now,
         updatedAt: now,
+        packId: args.packId,
+        packName: args.packName,
       });
       puzzleIds.push(puzzleId);
     }
@@ -235,5 +239,70 @@ export const getPuzzleCount = query({
     }
     const puzzles = await ctx.db.query("puzzles").collect();
     return puzzles.length;
+  },
+});
+
+// List all unique packs with puzzle counts
+export const listPacks = query({
+  handler: async (ctx) => {
+    const puzzles = await ctx.db.query("puzzles").collect();
+
+    // Group puzzles by packId
+    const packsMap = new Map<string, { packId: string; packName: string; count: number }>();
+
+    for (const puzzle of puzzles) {
+      if (puzzle.packId) {
+        const existing = packsMap.get(puzzle.packId);
+        if (existing) {
+          existing.count++;
+        } else {
+          packsMap.set(puzzle.packId, {
+            packId: puzzle.packId,
+            packName: puzzle.packName || "Unnamed Pack",
+            count: 1,
+          });
+        }
+      }
+    }
+
+    return Array.from(packsMap.values()).sort((a, b) => b.count - a.count);
+  },
+});
+
+// Get puzzles by pack ID
+export const getPuzzlesByPack = query({
+  args: { packId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("puzzles")
+      .withIndex("by_pack", (q) => q.eq("packId", args.packId))
+      .collect();
+  },
+});
+
+// Delete all puzzles in a pack
+export const deletePackPuzzles = mutation({
+  args: { packId: v.string() },
+  handler: async (ctx, args) => {
+    const puzzles = await ctx.db
+      .query("puzzles")
+      .withIndex("by_pack", (q) => q.eq("packId", args.packId))
+      .collect();
+
+    let deletedCount = 0;
+    for (const puzzle of puzzles) {
+      // Delete associated storage file if exists
+      if (puzzle.imageId) {
+        try {
+          await ctx.storage.delete(puzzle.imageId);
+        } catch (e) {
+          // Ignore storage deletion errors
+        }
+      }
+      await ctx.db.delete(puzzle._id);
+      deletedCount++;
+    }
+
+    return { deleted: deletedCount };
   },
 });

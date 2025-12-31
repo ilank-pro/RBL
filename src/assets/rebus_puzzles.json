@@ -1,0 +1,57 @@
+[
+  {
+    "image": "https://example.com/rebus1.png",
+    "answer": "reading between the lines",
+    "possibleAnswers": ["reading between the lines", "read between lines"],
+    "difficulty": 2,
+    "category": "rebus",
+    "hints": [
+      { "text": "Think about the word placement", "score": 1 },
+      { "text": "The word 'reading' appears twice", "score": 3 }
+    ]
+  },
+  {
+    "image": "https://example.com/rebus2.png",
+    "answer": "once upon a time",
+    "possibleAnswers": ["once upon a time", "once upon time"],
+    "difficulty": 1,
+    "category": "rebus",
+    "hints": [
+      { "text": "A common story beginning", "score": 1 },
+      { "text": "Look at the word order", "score": 2 }
+    ]
+  },
+  {
+    "image": "https://example.com/rebus3.png",
+    "answer": "split second",
+    "possibleAnswers": ["split second", "splitsecond"],
+    "difficulty": 2,
+    "category": "rebus",
+    "hints": [
+      { "text": "Time-related phrase", "score": 1 },
+      { "text": "Notice how the word is divided", "score": 3 }
+    ]
+  },
+  {
+    "image": "https://example.com/rebus4.png",
+    "answer": "circles under the eyes",
+    "possibleAnswers": ["circles under the eyes", "circles under eyes", "dark circles"],
+    "difficulty": 3,
+    "category": "rebus",
+    "hints": [
+      { "text": "Think about tired appearance", "score": 1 },
+      { "text": "Look at the position of shapes", "score": 3 }
+    ]
+  },
+  {
+    "image": "https://example.com/rebus5.png",
+    "answer": "head over heels",
+    "possibleAnswers": ["head over heels", "head over heel"],
+    "difficulty": 2,
+    "category": "rebus",
+    "hints": [
+      { "text": "Expression about falling in love", "score": 1 },
+      { "text": "Look at vertical positioning", "score": 2 }
+    ]
+  }
+]

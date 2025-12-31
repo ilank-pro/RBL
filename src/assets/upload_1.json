@@ -1,0 +1,288 @@
+[
+    {
+        "image": "https://example.com/puzzles/rebus_01_clean.png",
+        "answer": "sand box",
+        "alternateAnswers": [
+            "sandbox",
+            "sand box"
+        ],
+        "difficulty": 1,
+        "category": "rebus",
+        "hints": [
+            {
+                "text": "Look at what surrounds the word.",
+                "score": 1
+            },
+            {
+                "text": "Think of something children play in.",
+                "score": 2
+            },
+            {
+                "text": "The word is inside something.",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "image": "https://example.com/puzzles/rebus_02_clean.png",
+        "answer": "tricycle",
+        "alternateAnswers": [
+            "tricycle",
+            "tri cycle"
+        ],
+        "difficulty": 1,
+        "category": "rebus",
+        "hints": [
+            {
+                "text": "Count how many times the word appears.",
+                "score": 1
+            },
+            {
+                "text": "The number matters.",
+                "score": 2
+            },
+            {
+                "text": "Think of a vehicle.",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "image": "https://example.com/puzzles/rebus_03_clean.png",
+        "answer": "reading between the lines",
+        "alternateAnswers": [
+            "reading between the lines",
+            "read between the lines"
+        ],
+        "difficulty": 2,
+        "category": "rebus",
+        "hints": [
+            {
+                "text": "Spacing is important.",
+                "score": 1
+            },
+            {
+                "text": "Look carefully at the letters.",
+                "score": 2
+            },
+            {
+                "text": "It means understanding hidden meaning.",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "image": "https://example.com/puzzles/rebus_04_clean.png",
+        "answer": "foreign language",
+        "alternateAnswers": [
+            "foreign language",
+            "foreign languages"
+        ],
+        "difficulty": 2,
+        "category": "rebus",
+        "hints": [
+            {
+                "text": "Numbers replace letters.",
+                "score": 1
+            },
+            {
+                "text": "Think about unfamiliar speech.",
+                "score": 2
+            },
+            {
+                "text": "It’s not your native tongue.",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "image": "https://example.com/puzzles/rebus_05_clean.png",
+        "answer": "little house on the prairie",
+        "alternateAnswers": [
+            "little house on the prairie",
+            "little house on prairie"
+        ],
+        "difficulty": 3,
+        "category": "rebus",
+        "hints": [
+            {
+                "text": "Something small is placed above something large.",
+                "score": 1
+            },
+            {
+                "text": "Think of a famous book or show.",
+                "score": 2
+            },
+            {
+                "text": "House + landscape.",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "image": "https://example.com/puzzles/rebus_06_clean.png",
+        "answer": "unfinished business",
+        "alternateAnswers": [
+            "unfinished business"
+        ],
+        "difficulty": 2,
+        "category": "rebus",
+        "hints": [
+            {
+                "text": "The word is incomplete.",
+                "score": 1
+            },
+            {
+                "text": "Something is left undone.",
+                "score": 2
+            },
+            {
+                "text": "A common expression.",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "image": "https://example.com/puzzles/rebus_07_clean.png",
+        "answer": "sit down",
+        "alternateAnswers": [
+            "sit down",
+            "sitdown"
+        ],
+        "difficulty": 1,
+        "category": "rebus",
+        "hints": [
+            {
+                "text": "Look at the direction of the letters.",
+                "score": 1
+            },
+            {
+                "text": "The word is vertical.",
+                "score": 2
+            },
+            {
+                "text": "It’s a command.",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "image": "https://example.com/puzzles/rebus_08_clean.png",
+        "answer": "capital punishment",
+        "alternateAnswers": [
+            "capital punishment"
+        ],
+        "difficulty": 3,
+        "category": "rebus",
+        "hints": [
+            {
+                "text": "Notice the first letter.",
+                "score": 1
+            },
+            {
+                "text": "Typography is the clue.",
+                "score": 2
+            },
+            {
+                "text": "A serious legal term.",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "image": "https://example.com/puzzles/rebus_09_clean.png",
+        "answer": "you're under arrest",
+        "alternateAnswers": [
+            "you're under arrest",
+            "you are under arrest"
+        ],
+        "difficulty": 3,
+        "category": "rebus",
+        "hints": [
+            {
+                "text": "Words are split oddly.",
+                "score": 1
+            },
+            {
+                "text": "Sounds like a police phrase.",
+                "score": 2
+            },
+            {
+                "text": "Think law enforcement.",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "image": "https://example.com/puzzles/rebus_10_clean.png",
+        "answer": "one in a million",
+        "alternateAnswers": [
+            "one in a million",
+            "1 in a million"
+        ],
+        "difficulty": 2,
+        "category": "rebus",
+        "hints": [
+            {
+                "text": "Look at the number.",
+                "score": 1
+            },
+            {
+                "text": "It replaces a word.",
+                "score": 2
+            },
+            {
+                "text": "It means very rare.",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "image": "https://example.com/puzzles/rebus_11_clean.png",
+        "answer": "rising temperature",
+        "alternateAnswers": [
+            "rising temperature",
+            "temperature rising"
+        ],
+        "difficulty": 2,
+        "category": "rebus",
+        "hints": [
+            {
+                "text": "Look at the direction.",
+                "score": 1
+            },
+            {
+                "text": "Something is going up.",
+                "score": 2
+            },
+            {
+                "text": "It relates to heat.",
+                "score": 3
+            }
+        ]
+    },
+    {
+        "image": "https://example.com/puzzles/rebus_12_clean.png",
+        "answer": "high chair",
+        "alternateAnswers": [
+            "high chair",
+            "highchair"
+        ],
+        "difficulty": 1,
+        "category": "rebus",
+        "hints": [
+            {
+                "text": "Look at vertical position.",
+                "score": 1
+            },
+            {
+                "text": "Furniture is involved.",
+                "score": 2
+            },
+            {
+                "text": "Often used for babies.",
+                "score": 3
+            }
+        ]
+    }
+]

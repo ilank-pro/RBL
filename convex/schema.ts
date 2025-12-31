@@ -56,8 +56,12 @@ export default defineSchema({
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
+    // Pack/batch fields for grouped uploads
+    packId: v.optional(v.string()), // UUID linking puzzles from same bulk upload
+    packName: v.optional(v.string()), // Display name for the pack
   })
     .index("by_category", ["category"])
     .index("by_difficulty", ["difficulty"])
-    .index("by_active", ["isActive"]),
+    .index("by_active", ["isActive"])
+    .index("by_pack", ["packId"]),
 });

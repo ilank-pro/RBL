@@ -2131,6 +2131,97 @@ body {
   border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* Upload Toggle */
+.admin-upload-toggle {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.admin-toggle-btn {
+  flex: 1;
+  padding: 12px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: white;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.admin-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.admin-toggle-btn.active {
+  background: var(--accent-yellow);
+  color: var(--bg-dark);
+  font-weight: 600;
+}
+
+/* Progress Bar */
+.admin-progress {
+  margin: 20px 0;
+}
+
+.admin-progress-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.admin-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-yellow), var(--accent-gold));
+  transition: width 0.3s ease;
+}
+
+.admin-progress-text {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  opacity: 0.8;
+  text-align: center;
+}
+
+/* Preview Stats */
+.admin-preview-stats {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+/* Pack Actions */
+.admin-pack-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.admin-pack-label {
+  font-weight: 600;
+  color: var(--accent-yellow);
+}
+
+/* Pack Badge */
+.card-pack {
+  background: rgba(168, 85, 247, 0.3);
+  color: #c4b5fd;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
   .admin-form-row {

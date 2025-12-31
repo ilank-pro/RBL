@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import useAdminAuth from '../hooks/useAdminAuth';
+import JSZip from 'jszip';
 
 const CATEGORIES = ['rebus', 'symbols', 'puzzles', 'sequence', 'Contextual', 'Dingbats'];
 
@@ -340,16 +341,23 @@ const AddCardForm = () => {
   );
 };
 
-// Bulk Upload Form
+// Bulk Upload Form (supports JSON and ZIP files)
 const BulkUploadForm = () => {
+  const [uploadMode, setUploadMode] = useState('zip'); // 'zip' or 'json'
   const [jsonData, setJsonData] = useState('');
   const [parsedData, setParsedData] = useState(null);
   const [parseError, setParseError] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [message, setMessage] = useState(null);
+  const [zipFile, setZipFile] = useState(null);
+  const [zipPreview, setZipPreview] = useState(null);
 
   const createPuzzles = useMutation(api.puzzles.createPuzzles);
+  const generateUploadUrl = useMutation(api.puzzles.generateUploadUrl);
+  const getStorageUrl = useMutation(api.puzzles.getStorageUrl);
 
+  // Handle JSON text change
   const handleJsonChange = (e) => {
     const text = e.target.value;
     setJsonData(text);
@@ -370,7 +378,8 @@ const BulkUploadForm = () => {
     }
   };
 
-  const handleFileUpload = (e) => {
+  // Handle JSON file upload
+  const handleJsonFileUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
@@ -382,14 +391,177 @@ const BulkUploadForm = () => {
     }
   };
 
-  const handleSubmit = async () => {
+  // Handle ZIP file selection
+  const handleZipFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setZipFile(file);
+    setParseError(null);
+    setZipPreview(null);
+
+    try {
+      const zip = await JSZip.loadAsync(file);
+      const fileNames = Object.keys(zip.files);
+
+      // Find JSON manifest
+      const jsonFiles = fileNames.filter(f => f.endsWith('.json') && !f.startsWith('__MACOSX'));
+      if (jsonFiles.length === 0) {
+        setParseError('No JSON manifest found in ZIP file');
+        return;
+      }
+      if (jsonFiles.length > 1) {
+        setParseError('Multiple JSON files found. Please include only one manifest.');
+        return;
+      }
+
+      // Parse manifest
+      const manifestContent = await zip.file(jsonFiles[0]).async('string');
+      const manifest = JSON.parse(manifestContent);
+
+      if (!Array.isArray(manifest)) {
+        setParseError('JSON manifest must be an array of puzzles');
+        return;
+      }
+
+      // Validate image references
+      const imageFiles = fileNames.filter(f =>
+        !f.endsWith('.json') &&
+        !f.startsWith('__MACOSX') &&
+        !f.endsWith('/') &&
+        /\.(png|jpg|jpeg|gif|webp)$/i.test(f)
+      );
+
+      const missingImages = [];
+      for (const puzzle of manifest) {
+        // Extract filename from URL or use directly
+        const imageRef = puzzle.image || puzzle.imageUrl;
+        const imageFilename = imageRef.includes('/')
+          ? imageRef.split('/').pop()
+          : imageRef;
+
+        if (!imageFiles.some(f => f.endsWith(imageFilename))) {
+          missingImages.push(imageFilename);
+        }
+      }
+
+      if (missingImages.length > 0) {
+        setParseError(`Missing images in ZIP: ${missingImages.slice(0, 3).join(', ')}${missingImages.length > 3 ? ` and ${missingImages.length - 3} more` : ''}`);
+        return;
+      }
+
+      // Generate pack name from filename
+      const packName = file.name
+        .replace('.zip', '')
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+
+      setZipPreview({
+        packName,
+        puzzleCount: manifest.length,
+        imageCount: imageFiles.length,
+        manifest,
+        imageFiles,
+        zip,
+      });
+    } catch (err) {
+      setParseError('Failed to read ZIP file: ' + err.message);
+    }
+  };
+
+  // Submit ZIP upload
+  const handleZipSubmit = async () => {
+    if (!zipPreview) return;
+
+    setIsUploading(true);
+    setMessage(null);
+    setUploadProgress({ current: 0, total: zipPreview.puzzleCount });
+
+    const packId = crypto.randomUUID();
+    const puzzlesToCreate = [];
+
+    try {
+      for (let i = 0; i < zipPreview.manifest.length; i++) {
+        const puzzle = zipPreview.manifest[i];
+        setUploadProgress({ current: i + 1, total: zipPreview.puzzleCount });
+
+        // Extract filename from URL or use directly
+        const imageRef = puzzle.image || puzzle.imageUrl;
+        const imageFilename = imageRef.includes('/')
+          ? imageRef.split('/').pop()
+          : imageRef;
+
+        // Find the image file in ZIP
+        const imageFile = zipPreview.imageFiles.find(f => f.endsWith(imageFilename));
+        if (!imageFile) {
+          throw new Error(`Image not found: ${imageFilename}`);
+        }
+
+        // Get image blob
+        const imageBlob = await zipPreview.zip.file(imageFile).async('blob');
+
+        // Determine content type
+        const ext = imageFilename.split('.').pop().toLowerCase();
+        const contentType = {
+          'png': 'image/png',
+          'jpg': 'image/jpeg',
+          'jpeg': 'image/jpeg',
+          'gif': 'image/gif',
+          'webp': 'image/webp',
+        }[ext] || 'image/png';
+
+        // Upload to Convex storage
+        const uploadUrl = await generateUploadUrl();
+        const uploadResult = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': contentType },
+          body: imageBlob,
+        });
+        const { storageId } = await uploadResult.json();
+
+        // Get the public URL
+        const imageUrl = await getStorageUrl({ storageId });
+
+        puzzlesToCreate.push({
+          imageId: storageId,
+          imageUrl,
+          answer: puzzle.answer,
+          alternateAnswers: puzzle.alternateAnswers || [],
+          difficulty: puzzle.difficulty || 3,
+          category: puzzle.category || 'rebus',
+          hints: puzzle.hints || [],
+        });
+      }
+
+      // Create all puzzles with pack info
+      await createPuzzles({
+        puzzles: puzzlesToCreate,
+        packId,
+        packName: zipPreview.packName,
+      });
+
+      setMessage({
+        type: 'success',
+        text: `Successfully imported pack "${zipPreview.packName}" with ${puzzlesToCreate.length} puzzles!`,
+      });
+      setZipFile(null);
+      setZipPreview(null);
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Failed to import pack' });
+    } finally {
+      setIsUploading(false);
+      setUploadProgress({ current: 0, total: 0 });
+    }
+  };
+
+  // Submit JSON upload
+  const handleJsonSubmit = async () => {
     if (!parsedData || parsedData.length === 0) return;
 
     setIsUploading(true);
     setMessage(null);
 
     try {
-      // Transform data for Convex (images must be URLs for bulk upload)
       const puzzles = parsedData.map((p) => ({
         imageUrl: p.image || p.imageUrl,
         answer: p.answer,
@@ -416,22 +588,100 @@ const BulkUploadForm = () => {
         <div className={`admin-message ${message.type}`}>{message.text}</div>
       )}
 
-      <div className="admin-field">
-        <label>Upload JSON File</label>
-        <input
-          type="file"
-          accept=".json"
-          onChange={handleFileUpload}
-          className="admin-file-input"
-        />
+      <div className="admin-upload-toggle">
+        <button
+          className={`admin-toggle-btn ${uploadMode === 'zip' ? 'active' : ''}`}
+          onClick={() => setUploadMode('zip')}
+        >
+          Upload ZIP Pack
+        </button>
+        <button
+          className={`admin-toggle-btn ${uploadMode === 'json' ? 'active' : ''}`}
+          onClick={() => setUploadMode('json')}
+        >
+          Upload JSON
+        </button>
       </div>
 
-      <div className="admin-field">
-        <label>Or paste JSON directly</label>
-        <textarea
-          value={jsonData}
-          onChange={handleJsonChange}
-          placeholder={`[
+      {uploadMode === 'zip' ? (
+        <>
+          <div className="admin-field">
+            <label>Upload ZIP File (images + JSON manifest)</label>
+            <input
+              type="file"
+              accept=".zip"
+              onChange={handleZipFileSelect}
+              className="admin-file-input"
+            />
+          </div>
+
+          {parseError && <div className="admin-field-error">{parseError}</div>}
+
+          {zipPreview && (
+            <div className="admin-preview">
+              <h3>Pack: {zipPreview.packName}</h3>
+              <div className="admin-preview-stats">
+                <span>{zipPreview.puzzleCount} puzzles</span>
+                <span>{zipPreview.imageCount} images</span>
+              </div>
+              <div className="admin-preview-list">
+                {zipPreview.manifest.slice(0, 5).map((p, i) => (
+                  <div key={i} className="admin-preview-item">
+                    <span className="preview-answer">{p.answer}</span>
+                    <span className="preview-meta">
+                      {p.category || 'rebus'} | Difficulty: {p.difficulty || 3}
+                    </span>
+                  </div>
+                ))}
+                {zipPreview.manifest.length > 5 && (
+                  <div className="admin-preview-more">
+                    ...and {zipPreview.manifest.length - 5} more
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isUploading && uploadProgress.total > 0 && (
+            <div className="admin-progress">
+              <div className="admin-progress-bar">
+                <div
+                  className="admin-progress-fill"
+                  style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                />
+              </div>
+              <div className="admin-progress-text">
+                Uploading {uploadProgress.current} of {uploadProgress.total} puzzles...
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={handleZipSubmit}
+            className="admin-button primary"
+            disabled={!zipPreview || isUploading}
+          >
+            {isUploading ? 'Importing...' : `Import Pack (${zipPreview?.puzzleCount || 0} puzzles)`}
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="admin-field">
+            <label>Upload JSON File</label>
+            <input
+              type="file"
+              accept=".json"
+              onChange={handleJsonFileUpload}
+              className="admin-file-input"
+            />
+          </div>
+
+          <div className="admin-field">
+            <label>Or paste JSON directly</label>
+            <textarea
+              value={jsonData}
+              onChange={handleJsonChange}
+              placeholder={`[
   {
     "image": "https://example.com/image.png",
     "answer": "answer text",
@@ -444,39 +694,41 @@ const BulkUploadForm = () => {
     ]
   }
 ]`}
-          className="admin-textarea"
-          rows={12}
-        />
-      </div>
-
-      {parseError && <div className="admin-field-error">{parseError}</div>}
-
-      {parsedData && (
-        <div className="admin-preview">
-          <h3>Preview: {parsedData.length} puzzles to import</h3>
-          <div className="admin-preview-list">
-            {parsedData.slice(0, 5).map((p, i) => (
-              <div key={i} className="admin-preview-item">
-                <span className="preview-answer">{p.answer}</span>
-                <span className="preview-meta">
-                  {p.category || 'rebus'} | Difficulty: {p.difficulty || 3}
-                </span>
-              </div>
-            ))}
-            {parsedData.length > 5 && (
-              <div className="admin-preview-more">...and {parsedData.length - 5} more</div>
-            )}
+              className="admin-textarea"
+              rows={12}
+            />
           </div>
-        </div>
-      )}
 
-      <button
-        onClick={handleSubmit}
-        className="admin-button primary"
-        disabled={!parsedData || isUploading}
-      >
-        {isUploading ? 'Importing...' : `Import ${parsedData?.length || 0} Puzzles`}
-      </button>
+          {parseError && <div className="admin-field-error">{parseError}</div>}
+
+          {parsedData && (
+            <div className="admin-preview">
+              <h3>Preview: {parsedData.length} puzzles to import</h3>
+              <div className="admin-preview-list">
+                {parsedData.slice(0, 5).map((p, i) => (
+                  <div key={i} className="admin-preview-item">
+                    <span className="preview-answer">{p.answer}</span>
+                    <span className="preview-meta">
+                      {p.category || 'rebus'} | Difficulty: {p.difficulty || 3}
+                    </span>
+                  </div>
+                ))}
+                {parsedData.length > 5 && (
+                  <div className="admin-preview-more">...and {parsedData.length - 5} more</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <button
+            onClick={handleJsonSubmit}
+            className="admin-button primary"
+            disabled={!parsedData || isUploading}
+          >
+            {isUploading ? 'Importing...' : `Import ${parsedData?.length || 0} Puzzles`}
+          </button>
+        </>
+      )}
     </div>
   );
 };
@@ -664,13 +916,17 @@ const EditCardModal = ({ puzzle, onClose }) => {
 // Manage Cards
 const ManageCards = () => {
   const puzzles = useQuery(api.puzzles.listPuzzles, {});
+  const packs = useQuery(api.puzzles.listPacks);
   const deletePuzzle = useMutation(api.puzzles.deletePuzzle);
+  const deletePackPuzzles = useMutation(api.puzzles.deletePackPuzzles);
   const toggleActive = useMutation(api.puzzles.togglePuzzleActive);
   const [statusFilter, setStatusFilter] = useState('all');
   const [difficultyFilter, setDifficultyFilter] = useState('all');
   const [hintsFilter, setHintsFilter] = useState('all');
+  const [packFilter, setPackFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingPuzzle, setEditingPuzzle] = useState(null);
+  const [message, setMessage] = useState(null);
 
   if (!puzzles) {
     return <div className="admin-loading">Loading puzzles...</div>;
@@ -697,12 +953,35 @@ const ManageCards = () => {
     if (hintsFilter === '1-2' && (p.hints.length < 1 || p.hints.length > 2)) return false;
     if (hintsFilter === '3+' && p.hints.length < 3) return false;
 
+    // Pack filter
+    if (packFilter !== 'all') {
+      if (packFilter === 'none' && p.packId) return false;
+      if (packFilter !== 'none' && p.packId !== packFilter) return false;
+    }
+
     return true;
   });
 
   const handleDelete = async (puzzleId) => {
     if (window.confirm('Are you sure you want to delete this puzzle?')) {
       await deletePuzzle({ puzzleId });
+    }
+  };
+
+  const handleDeletePack = async () => {
+    if (packFilter === 'all' || packFilter === 'none') return;
+
+    const pack = packs?.find(p => p.packId === packFilter);
+    const packName = pack?.packName || 'this pack';
+
+    if (window.confirm(`Are you sure you want to delete ALL ${pack?.count || 0} puzzles in "${packName}"? This cannot be undone.`)) {
+      try {
+        const result = await deletePackPuzzles({ packId: packFilter });
+        setMessage({ type: 'success', text: `Deleted ${result.deleted} puzzles from "${packName}"` });
+        setPackFilter('all');
+      } catch (err) {
+        setMessage({ type: 'error', text: err.message || 'Failed to delete pack' });
+      }
     }
   };
 
@@ -713,6 +992,10 @@ const ManageCards = () => {
           puzzle={editingPuzzle}
           onClose={() => setEditingPuzzle(null)}
         />
+      )}
+
+      {message && (
+        <div className={`admin-message ${message.type}`}>{message.text}</div>
       )}
 
       <div className="admin-search-bar">
@@ -763,8 +1046,35 @@ const ManageCards = () => {
             <option value="1-2">1-2 Hints</option>
             <option value="3+">3+ Hints</option>
           </select>
+          <select
+            value={packFilter}
+            onChange={(e) => setPackFilter(e.target.value)}
+            className="admin-select small"
+          >
+            <option value="all">All Packs</option>
+            <option value="none">No Pack</option>
+            {packs?.map((pack) => (
+              <option key={pack.packId} value={pack.packId}>
+                {pack.packName} ({pack.count})
+              </option>
+            ))}
+          </select>
         </div>
       </div>
+
+      {packFilter !== 'all' && packFilter !== 'none' && (
+        <div className="admin-pack-actions">
+          <span className="admin-pack-label">
+            Viewing pack: {packs?.find(p => p.packId === packFilter)?.packName}
+          </span>
+          <button
+            onClick={handleDeletePack}
+            className="admin-button danger small"
+          >
+            Delete Entire Pack
+          </button>
+        </div>
+      )}
 
       <div className="admin-cards-list">
         {filteredPuzzles.map((puzzle) => (
@@ -778,6 +1088,9 @@ const ManageCards = () => {
                 <span className="card-category">{puzzle.category}</span>
                 <span className="card-difficulty">Difficulty: {puzzle.difficulty}</span>
                 <span className="card-hints">{puzzle.hints.length} hints</span>
+                {puzzle.packName && (
+                  <span className="card-pack">{puzzle.packName}</span>
+                )}
               </div>
             </div>
             <div className="admin-card-actions">
