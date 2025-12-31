@@ -33,6 +33,9 @@ const Admin = ({ user }) => {
           <h1>Access Denied</h1>
           <div className="admin-error">
             <p>Your account does not have admin privileges.</p>
+            <p style={{ fontSize: '0.8rem', opacity: 0.6, marginTop: '10px' }}>
+              Your Meta ID: {user?.metaId || 'Unknown'}
+            </p>
             <Link to="/" className="admin-button">Back to Home</Link>
           </div>
         </div>

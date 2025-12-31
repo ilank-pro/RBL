@@ -9,7 +9,9 @@ const useAdminAuth = (user) => {
   const [passwordError, setPasswordError] = useState(null);
 
   // Check if the current user's metaId is in the admin allowlist
-  const isInAllowlist = user?.metaId && ADMIN_META_IDS.includes(user.metaId);
+  // Convert both to strings for comparison to handle number/string mismatches
+  const userMetaId = user?.metaId ? String(user.metaId) : null;
+  const isInAllowlist = userMetaId && ADMIN_META_IDS.some(id => id === userMetaId);
 
   // Full admin access requires both allowlist AND password
   const isAdmin = isInAllowlist && isPasswordVerified;
