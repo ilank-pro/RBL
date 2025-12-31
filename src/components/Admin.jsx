@@ -481,12 +481,193 @@ const BulkUploadForm = () => {
   );
 };
 
+// Edit Card Modal
+const EditCardModal = ({ puzzle, onClose }) => {
+  const [formData, setFormData] = useState({
+    answer: puzzle.answer,
+    alternateAnswers: puzzle.alternateAnswers.join(', '),
+    difficulty: puzzle.difficulty,
+    category: puzzle.category,
+    hints: puzzle.hints.length > 0 ? puzzle.hints : [{ text: '', score: 3 }],
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [message, setMessage] = useState(null);
+
+  const updatePuzzle = useMutation(api.puzzles.updatePuzzle);
+
+  const addHint = () => {
+    setFormData({
+      ...formData,
+      hints: [...formData.hints, { text: '', score: 3 }],
+    });
+  };
+
+  const removeHint = (index) => {
+    setFormData({
+      ...formData,
+      hints: formData.hints.filter((_, i) => i !== index),
+    });
+  };
+
+  const updateHint = (index, field, value) => {
+    const newHints = [...formData.hints];
+    newHints[index] = { ...newHints[index], [field]: value };
+    setFormData({ ...formData, hints: newHints });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    setMessage(null);
+
+    try {
+      await updatePuzzle({
+        puzzleId: puzzle._id,
+        answer: formData.answer,
+        alternateAnswers: formData.alternateAnswers
+          .split(',')
+          .map((a) => a.trim())
+          .filter((a) => a),
+        difficulty: formData.difficulty,
+        category: formData.category,
+        hints: formData.hints.filter((h) => h.text.trim()),
+      });
+
+      setMessage({ type: 'success', text: 'Puzzle updated successfully!' });
+      setTimeout(() => onClose(), 1000);
+    } catch (err) {
+      setMessage({ type: 'error', text: err.message || 'Failed to update puzzle' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="admin-modal-overlay" onClick={onClose}>
+      <div className="admin-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="admin-modal-header">
+          <h2>Edit Puzzle</h2>
+          <button onClick={onClose} className="admin-modal-close">×</button>
+        </div>
+
+        <div className="admin-modal-image">
+          <img src={puzzle.imageUrl} alt={puzzle.answer} />
+        </div>
+
+        <form onSubmit={handleSubmit} className="admin-form">
+          {message && (
+            <div className={`admin-message ${message.type}`}>{message.text}</div>
+          )}
+
+          <div className="admin-form-row">
+            <div className="admin-field">
+              <label>Answer</label>
+              <input
+                type="text"
+                value={formData.answer}
+                onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
+                placeholder="Primary answer"
+                className="admin-input"
+                required
+              />
+            </div>
+            <div className="admin-field">
+              <label>Alternate Answers (comma-separated)</label>
+              <input
+                type="text"
+                value={formData.alternateAnswers}
+                onChange={(e) => setFormData({ ...formData, alternateAnswers: e.target.value })}
+                placeholder="alt1, alt2, alt3"
+                className="admin-input"
+              />
+            </div>
+          </div>
+
+          <div className="admin-form-row">
+            <div className="admin-field">
+              <label>Difficulty: {formData.difficulty}</label>
+              <input
+                type="range"
+                min="1"
+                max="5"
+                value={formData.difficulty}
+                onChange={(e) => setFormData({ ...formData, difficulty: parseInt(e.target.value) })}
+                className="admin-slider"
+              />
+              <div className="admin-slider-labels">
+                <span>Easy</span>
+                <span>Hard</span>
+              </div>
+            </div>
+            <div className="admin-field">
+              <label>Category</label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="admin-select"
+              >
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="admin-field">
+            <label>Hints</label>
+            {formData.hints.map((hint, index) => (
+              <div key={index} className="admin-hint-row">
+                <input
+                  type="text"
+                  value={hint.text}
+                  onChange={(e) => updateHint(index, 'text', e.target.value)}
+                  placeholder={`Hint ${index + 1}`}
+                  className="admin-input hint-input"
+                />
+                <div className="hint-score">
+                  <span>Score: {hint.score}</span>
+                  <input
+                    type="range"
+                    min="1"
+                    max="5"
+                    value={hint.score}
+                    onChange={(e) => updateHint(index, 'score', parseInt(e.target.value))}
+                    className="admin-slider small"
+                  />
+                </div>
+                {formData.hints.length > 1 && (
+                  <button type="button" onClick={() => removeHint(index)} className="admin-button danger small">
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+            <button type="button" onClick={addHint} className="admin-button secondary small">
+              + Add Hint
+            </button>
+          </div>
+
+          <div className="admin-modal-actions">
+            <button type="button" onClick={onClose} className="admin-button secondary">
+              Cancel
+            </button>
+            <button type="submit" className="admin-button primary" disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // Manage Cards
 const ManageCards = () => {
   const puzzles = useQuery(api.puzzles.listPuzzles, {});
   const deletePuzzle = useMutation(api.puzzles.deletePuzzle);
   const toggleActive = useMutation(api.puzzles.togglePuzzleActive);
   const [filter, setFilter] = useState('all');
+  const [editingPuzzle, setEditingPuzzle] = useState(null);
 
   if (!puzzles) {
     return <div className="admin-loading">Loading puzzles...</div>;
@@ -506,6 +687,13 @@ const ManageCards = () => {
 
   return (
     <div className="admin-manage">
+      {editingPuzzle && (
+        <EditCardModal
+          puzzle={editingPuzzle}
+          onClose={() => setEditingPuzzle(null)}
+        />
+      )}
+
       <div className="admin-manage-header">
         <div className="admin-stats">
           <span>Total: {puzzles.length}</span>
@@ -537,6 +725,12 @@ const ManageCards = () => {
               </div>
             </div>
             <div className="admin-card-actions">
+              <button
+                onClick={() => setEditingPuzzle(puzzle)}
+                className="admin-button small"
+              >
+                Edit
+              </button>
               <button
                 onClick={() => toggleActive({ puzzleId: puzzle._id })}
                 className={`admin-button small ${puzzle.isActive ? 'warning' : 'success'}`}
