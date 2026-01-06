@@ -46,19 +46,24 @@ export const createUser = mutation({
   },
 });
 
-// Get or create user by Meta ID (for Facebook/Instagram OAuth)
+// Get or create user by Firebase UID (for Firebase Auth)
 export const getOrCreateUser = mutation({
   args: {
-    metaId: v.string(),
+    firebaseUid: v.string(),
     name: v.string(),
     avatar: v.string(),
-    platform: v.union(v.literal("facebook"), v.literal("instagram")),
+    provider: v.union(
+      v.literal("google.com"),
+      v.literal("facebook.com"),
+      v.literal("apple.com"),
+      v.literal("guest")
+    ),
   },
   handler: async (ctx, args) => {
-    // Check if user with this metaId already exists
+    // Check if user with this firebaseUid already exists
     const existingUser = await ctx.db
       .query("users")
-      .withIndex("by_metaId", (q) => q.eq("metaId", args.metaId))
+      .withIndex("by_firebaseUid", (q) => q.eq("firebaseUid", args.firebaseUid))
       .first();
 
     if (existingUser) {
@@ -66,17 +71,17 @@ export const getOrCreateUser = mutation({
       await ctx.db.patch(existingUser._id, {
         name: args.name,
         avatar: args.avatar,
-        platform: args.platform,
+        platform: args.provider,
       });
       return existingUser._id;
     }
 
     // Create new user with monetization fields
     const userId = await ctx.db.insert("users", {
-      metaId: args.metaId,
+      firebaseUid: args.firebaseUid,
       name: args.name,
       avatar: args.avatar,
-      platform: args.platform,
+      platform: args.provider,
       // Initialize monetization fields
       tier: "free",
       coins: 50, // Free tier starting coins

@@ -1,61 +1,50 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAudio } from '../contexts/AudioContext';
-import useFacebookAuth from '../hooks/useFacebookAuth';
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 
 const Login = ({ onLogin, pendingRoomCode }) => {
   const { startBgMusic, isMusicMuted } = useAudio();
-  const { isSDKReady, isLoading, error, login } = useFacebookAuth();
+  const { loading, error, signInWithGoogle, signInWithFacebook, signInWithApple } = useFirebaseAuth();
   const [loginError, setLoginError] = useState(null);
 
-  const handleFacebookLogin = async () => {
+  const handleLogin = async (signInMethod, provider) => {
     try {
       setLoginError(null);
-      const userData = await login();
+      const userData = await signInMethod();
 
       // Start background music on successful login
       if (!isMusicMuted) {
         startBgMusic();
       }
 
-      // Pass real user data to parent
+      // Pass user data to parent
       onLogin(userData);
     } catch (err) {
-      console.error('Facebook login failed:', err);
-      setLoginError(err.message || 'Login failed. Please try again.');
-    }
-  };
-
-  // Instagram uses the same Facebook OAuth (same account system)
-  const handleInstagramLogin = async () => {
-    try {
-      setLoginError(null);
-      const userData = await login();
-
-      // Mark as instagram platform
-      userData.platform = 'instagram';
-
-      // Start background music on successful login
-      if (!isMusicMuted) {
-        startBgMusic();
+      console.error(`${provider} login failed:`, err);
+      // Handle specific Firebase auth errors
+      if (err.code === 'auth/popup-closed-by-user') {
+        setLoginError('Login cancelled. Please try again.');
+      } else if (err.code === 'auth/popup-blocked') {
+        setLoginError('Popup was blocked. Please allow popups for this site.');
+      } else {
+        setLoginError(err.message || 'Login failed. Please try again.');
       }
-
-      // Pass real user data to parent
-      onLogin(userData);
-    } catch (err) {
-      console.error('Instagram login failed:', err);
-      setLoginError(err.message || 'Login failed. Please try again.');
     }
   };
 
-  // TEMPORARY: Guest login bypass while Facebook app is not verified
+  const handleGoogleLogin = () => handleLogin(signInWithGoogle, 'Google');
+  const handleFacebookLogin = () => handleLogin(signInWithFacebook, 'Facebook');
+  const handleAppleLogin = () => handleLogin(signInWithApple, 'Apple');
+
+  // Guest login for testing
   const handleGuestLogin = () => {
     const guestId = `guest-${Date.now()}`;
     const guestData = {
-      metaId: guestId,
+      firebaseUid: guestId,
       name: `Player ${Math.floor(Math.random() * 1000)}`,
       avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${guestId}`,
-      platform: 'facebook',
+      provider: 'guest',
     };
 
     if (!isMusicMuted) {
@@ -72,7 +61,7 @@ const Login = ({ onLogin, pendingRoomCode }) => {
         {pendingRoomCode ? 'Login to join the game!' : 'Login to compete!'}
       </p>
 
-      {loginError && (
+      {(loginError || error) && (
         <div style={{
           color: '#ff6b6b',
           marginBottom: '20px',
@@ -80,29 +69,38 @@ const Login = ({ onLogin, pendingRoomCode }) => {
           background: 'rgba(255,107,107,0.1)',
           borderRadius: '8px'
         }}>
-          {loginError}
+          {loginError || error}
         </div>
       )}
 
       <button
-        className="btn-social btn-fb"
-        onClick={handleFacebookLogin}
-        disabled={!isSDKReady || isLoading}
-        style={{ opacity: (!isSDKReady || isLoading) ? 0.7 : 1 }}
+        className="btn-social btn-google"
+        onClick={handleGoogleLogin}
+        disabled={loading}
+        style={{ opacity: loading ? 0.7 : 1 }}
       >
-        {isLoading ? 'Logging in...' : 'Login with Facebook'}
+        {loading ? 'Logging in...' : 'Continue with Google'}
       </button>
 
       <button
-        className="btn-social btn-ig"
-        onClick={handleInstagramLogin}
-        disabled={!isSDKReady || isLoading}
-        style={{ opacity: (!isSDKReady || isLoading) ? 0.7 : 1 }}
+        className="btn-social btn-apple"
+        onClick={handleAppleLogin}
+        disabled={loading}
+        style={{ opacity: loading ? 0.7 : 1 }}
       >
-        {isLoading ? 'Logging in...' : 'Login with Instagram'}
+        {loading ? 'Logging in...' : 'Continue with Apple'}
       </button>
 
-      {/* TEMPORARY: Guest login while Facebook app is pending verification */}
+      <button
+        className="btn-social btn-fb"
+        onClick={handleFacebookLogin}
+        disabled={loading}
+        style={{ opacity: loading ? 0.7 : 1 }}
+      >
+        {loading ? 'Logging in...' : 'Continue with Facebook'}
+      </button>
+
+      {/* Guest login for testing */}
       <button
         className="btn-social"
         onClick={handleGuestLogin}
@@ -114,12 +112,6 @@ const Login = ({ onLogin, pendingRoomCode }) => {
       >
         Continue as Guest
       </button>
-
-      {!isSDKReady && (
-        <div style={{ marginTop: '20px', fontSize: '0.8rem', opacity: 0.7 }}>
-          Loading...
-        </div>
-      )}
 
       <div style={{ marginTop: '50px', fontSize: '0.8rem', opacity: 0.7 }}>
         Compete with friends in real-time!

@@ -37,7 +37,10 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
   const createRoom = useMutation(api.rooms.createRoom);
   const joinRoom = useMutation(api.rooms.joinRoom);
   const claimMonthlyBonus = useMutation(api.coins.claimMonthlyBonus);
-  const userMonetization = useQuery(api.coins.getUserMonetization, { userId: user.userId });
+  const userMonetization = useQuery(
+    api.coins.getUserMonetization,
+    user?.userId ? { userId: user.userId } : "skip"
+  );
 
   const userTier = userMonetization?.tier ?? 'free';
   const userCoins = userMonetization?.coins ?? 0;
@@ -71,6 +74,11 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
       checkMonthlyBonus();
     }
   }, [user?.userId, userMonetization, userTier, bonusChecked]);
+
+  // Guard against null user (during logout transition)
+  if (!user) {
+    return null;
+  }
 
   const isRoundOptionAvailable = (rounds) => rounds <= tierSettings.maxRounds;
   const isTimeOptionAvailable = (time) => time >= tierSettings.minTime && time <= tierSettings.maxTime;
@@ -236,6 +244,7 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
         trigger="settings"
         currentTier={userTier}
         currentCoins={userCoins}
+        userId={user?.userId}
         onPurchaseTier={(tier) => {
           console.log('Purchase tier:', tier);
           setShowUpgradePopup(false);

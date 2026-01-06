@@ -238,6 +238,25 @@ body {
   color: white;
 }
 
+.btn-google {
+  background-color: #ffffff;
+  color: #333333;
+  border: 1px solid #dadce0;
+}
+
+.btn-google:hover {
+  background-color: #f8f9fa;
+}
+
+.btn-apple {
+  background-color: #000000;
+  color: white;
+}
+
+.btn-apple:hover {
+  background-color: #333333;
+}
+
 /* Game container - main card */
 .game-container {
   display: flex;

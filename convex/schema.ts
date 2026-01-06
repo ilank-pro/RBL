@@ -5,8 +5,17 @@ export default defineSchema({
   users: defineTable({
     name: v.string(),
     avatar: v.string(),
-    platform: v.union(v.literal("facebook"), v.literal("instagram"), v.literal("mock")),
-    metaId: v.optional(v.string()),
+    platform: v.union(
+      v.literal("facebook"),
+      v.literal("instagram"),
+      v.literal("mock"),
+      v.literal("google.com"),
+      v.literal("facebook.com"),
+      v.literal("apple.com"),
+      v.literal("guest")
+    ),
+    metaId: v.optional(v.string()), // Legacy: Meta platform ID
+    firebaseUid: v.optional(v.string()), // Firebase Auth UID
     // Monetization fields
     tier: v.optional(v.union(
       v.literal("free"),
@@ -20,7 +29,19 @@ export default defineSchema({
     totalCoinsEarned: v.optional(v.number()),
     totalCoinsSpent: v.optional(v.number()),
     lastDailyLoginAt: v.optional(v.number()),
-  }).index("by_metaId", ["metaId"]),
+    // Stripe fields
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+    subscriptionStatus: v.optional(v.union(
+      v.literal("active"),
+      v.literal("canceled"),
+      v.literal("past_due"),
+      v.literal("incomplete")
+    )),
+  })
+    .index("by_metaId", ["metaId"])
+    .index("by_firebaseUid", ["firebaseUid"])
+    .index("by_stripeCustomerId", ["stripeCustomerId"]),
 
   transactions: defineTable({
     userId: v.id("users"),

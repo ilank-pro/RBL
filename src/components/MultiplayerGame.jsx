@@ -643,14 +643,13 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
         trigger={upgradePopupTrigger}
         currentTier={userTier}
         currentCoins={userCoins}
+        userId={user?.userId}
         onPurchaseTier={(tier) => {
           console.log('Purchase tier:', tier);
-          // TODO: Integrate Stripe checkout
           setShowUpgradePopup(false);
         }}
         onPurchaseCoins={(pack) => {
           console.log('Purchase coins:', pack);
-          // TODO: Integrate Stripe checkout
           setShowUpgradePopup(false);
         }}
       />

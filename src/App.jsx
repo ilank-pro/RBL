@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { ConvexProvider, ConvexReactClient, useMutation } from 'convex/react';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './config/firebase';
 import Login from './components/Login';
 import Lobby from './components/Lobby';
 import WaitingRoom from './components/WaitingRoom';
@@ -14,6 +16,7 @@ import TermsOfService from './components/TermsOfService';
 import DataDeletion from './components/DataDeletion';
 import Admin from './components/Admin';
 import { AudioProvider } from './contexts/AudioContext';
+import { useFirebaseAuth } from './hooks/useFirebaseAuth';
 import './index.css';
 
 // Need to import api
@@ -111,41 +114,60 @@ function AppContent() {
   const [pendingRoomCode, setPendingRoomCode] = useState(null);
   const [isRestoring, setIsRestoring] = useState(true);
 
+  const { signOut } = useFirebaseAuth();
   const getOrCreateUser = useMutation(api.rooms.getOrCreateUser);
 
-  // Restore session from localStorage on mount
+  // Listen to Firebase auth state changes and restore session
   useEffect(() => {
-    const savedUser = localStorage.getItem(USER_STORAGE_KEY);
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        setUser(parsedUser);
-        setScreen(SCREENS.LOBBY);
-      } catch (err) {
-        console.error('Failed to restore session:', err);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // User is signed in via Firebase
+        const savedUser = localStorage.getItem(USER_STORAGE_KEY);
+        if (savedUser) {
+          try {
+            const parsedUser = JSON.parse(savedUser);
+            // Verify the saved user matches the Firebase user
+            if (parsedUser.firebaseUid === firebaseUser.uid) {
+              setUser(parsedUser);
+              setScreen(SCREENS.LOBBY);
+            } else {
+              // Mismatch - clear and re-sync
+              localStorage.removeItem(USER_STORAGE_KEY);
+            }
+          } catch (err) {
+            console.error('Failed to restore session:', err);
+            localStorage.removeItem(USER_STORAGE_KEY);
+          }
+        }
+      } else {
+        // User is signed out
+        setUser(null);
         localStorage.removeItem(USER_STORAGE_KEY);
+        setScreen(SCREENS.LOGIN);
       }
-    }
-    setIsRestoring(false);
+      setIsRestoring(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  // Handle login with real Facebook data
+  // Handle login with Firebase user data
   const handleLogin = async (userData) => {
     try {
-      // userData comes from Facebook SDK: { metaId, name, avatar, platform }
+      // userData comes from Firebase auth: { firebaseUid, name, avatar, provider }
       const userId = await getOrCreateUser({
-        metaId: userData.metaId,
+        firebaseUid: userData.firebaseUid,
         name: userData.name,
         avatar: userData.avatar,
-        platform: userData.platform,
+        provider: userData.provider,
       });
 
       const newUser = {
         userId: userId,
-        metaId: userData.metaId,
+        firebaseUid: userData.firebaseUid,
         name: userData.name,
         avatar: userData.avatar,
-        platform: userData.platform,
+        provider: userData.provider,
       };
 
       // Save to state and localStorage
@@ -164,11 +186,11 @@ function AppContent() {
       console.error('Login failed:', err);
       // Still allow user to proceed with the data we have
       const newUser = {
-        userId: `fb-${userData.metaId}`,
-        metaId: userData.metaId,
+        userId: `fb-${userData.firebaseUid}`,
+        firebaseUid: userData.firebaseUid,
         name: userData.name,
         avatar: userData.avatar,
-        platform: userData.platform,
+        provider: userData.provider,
       };
       setUser(newUser);
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
@@ -221,7 +243,7 @@ function AppContent() {
     setScreen(SCREENS.LOBBY);
   };
 
-  const handleExit = () => {
+  const handleExit = async () => {
     setRoomId(null);
     setRoomCode(null);
     setIsHost(false);
@@ -229,9 +251,11 @@ function AppContent() {
     setUser(null);
     // Clear session from localStorage
     localStorage.removeItem(USER_STORAGE_KEY);
-    // Logout from Facebook
-    if (window.FB) {
-      window.FB.logout(() => {});
+    // Sign out from Firebase
+    try {
+      await signOut();
+    } catch (err) {
+      console.error('Sign out error:', err);
     }
     setScreen(SCREENS.LOGIN);
     navigate('/');

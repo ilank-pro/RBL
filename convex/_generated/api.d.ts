@@ -10,7 +10,9 @@
 
 import type * as coins from "../coins.js";
 import type * as games from "../games.js";
+import type * as http from "../http.js";
 import type * as migration from "../migration.js";
+import type * as payments from "../payments.js";
 import type * as puzzles from "../puzzles.js";
 import type * as rooms from "../rooms.js";
 
@@ -23,7 +25,9 @@ import type {
 declare const fullApi: ApiFromModules<{
   coins: typeof coins;
   games: typeof games;
+  http: typeof http;
   migration: typeof migration;
+  payments: typeof payments;
   puzzles: typeof puzzles;
   rooms: typeof rooms;
 }>;

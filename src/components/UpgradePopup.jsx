@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useAction } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 // Tier configuration
 const TIERS = {
@@ -49,10 +51,10 @@ const TIERS = {
 };
 
 const COIN_PACKS = [
-  { name: 'small', coins: 100, price: '$0.99' },
-  { name: 'medium', coins: 350, price: '$2.99', bonus: '+50' },
-  { name: 'large', coins: 700, price: '$4.99', bonus: '+150' },
-  { name: 'mega', coins: 1600, price: '$9.99', bonus: '+400' },
+  { name: 'coins_small', coins: 100, price: '$0.99' },
+  { name: 'coins_medium', coins: 350, price: '$2.99', bonus: '+50' },
+  { name: 'coins_large', coins: 700, price: '$4.99', bonus: '+150' },
+  { name: 'coins_mega', coins: 1600, price: '$9.99', bonus: '+400' },
 ];
 
 export default function UpgradePopup({
@@ -61,10 +63,15 @@ export default function UpgradePopup({
   trigger, // 'emoji', 'hint', 'settings', 'skip'
   currentTier = 'free',
   currentCoins = 0,
+  userId,
   onPurchaseTier,
   onPurchaseCoins,
 }) {
   const [showCoinPacks, setShowCoinPacks] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingItem, setLoadingItem] = useState(null);
+
+  const createCheckoutSession = useAction(api.payments.createCheckoutSession);
 
   if (!isOpen) return null;
 
@@ -83,20 +90,72 @@ export default function UpgradePopup({
     }
   };
 
-  const handlePurchaseTier = (tier) => {
+  const handlePurchaseTier = async (tier) => {
+    if (!userId) {
+      console.error('No userId provided for checkout');
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadingItem(tier);
+
+    try {
+      const result = await createCheckoutSession({
+        userId,
+        priceType: tier,
+        successUrl: `${window.location.origin}/?payment=success`,
+        cancelUrl: `${window.location.origin}/?payment=canceled`,
+      });
+
+      if (result.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = result.url;
+      }
+    } catch (error) {
+      console.error('Failed to create checkout session:', error);
+      alert('Unable to start checkout. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setLoadingItem(null);
+    }
+
     if (onPurchaseTier) {
       onPurchaseTier(tier);
     }
-    // In production, this would open Stripe checkout
-    console.log('Purchase tier:', tier);
   };
 
-  const handlePurchaseCoins = (pack) => {
+  const handlePurchaseCoins = async (pack) => {
+    if (!userId) {
+      console.error('No userId provided for checkout');
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadingItem(pack.name);
+
+    try {
+      const result = await createCheckoutSession({
+        userId,
+        priceType: pack.name,
+        successUrl: `${window.location.origin}/?payment=success&coins=true`,
+        cancelUrl: `${window.location.origin}/?payment=canceled`,
+      });
+
+      if (result.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = result.url;
+      }
+    } catch (error) {
+      console.error('Failed to create checkout session:', error);
+      alert('Unable to start checkout. Please try again.');
+    } finally {
+      setIsLoading(false);
+      setLoadingItem(null);
+    }
+
     if (onPurchaseCoins) {
       onPurchaseCoins(pack);
     }
-    // In production, this would open Stripe checkout
-    console.log('Purchase coins:', pack);
   };
 
   return (
@@ -104,7 +163,7 @@ export default function UpgradePopup({
       <div className="upgrade-popup" onClick={(e) => e.stopPropagation()}>
         <button className="upgrade-close-btn" onClick={onClose}>×</button>
 
-        <h2 className="upgrade-title">🎮 {getTriggerMessage()}</h2>
+        <h2 className="upgrade-title">{getTriggerMessage()}</h2>
 
         {currentTier !== 'free' && (
           <p className="upgrade-current-tier">
@@ -113,7 +172,7 @@ export default function UpgradePopup({
         )}
 
         <div className="upgrade-coins-display">
-          💰 {currentCoins} coins
+          {currentCoins} coins
         </div>
 
         {!showCoinPacks ? (
@@ -124,6 +183,7 @@ export default function UpgradePopup({
                 const isLowerTier =
                   (currentTier === 'gold' && key === 'bronze') ||
                   (currentTier === 'platinum' && (key === 'bronze' || key === 'gold'));
+                const isLoadingThis = isLoading && loadingItem === key;
 
                 return (
                   <div
@@ -131,7 +191,7 @@ export default function UpgradePopup({
                     className={`upgrade-tier-card ${tier.popular ? 'popular' : ''} ${isCurrentTier ? 'current' : ''}`}
                     style={{ borderColor: tier.color }}
                   >
-                    {tier.popular && <div className="popular-badge">⭐ POPULAR</div>}
+                    {tier.popular && <div className="popular-badge">POPULAR</div>}
                     {isCurrentTier && <div className="current-badge">YOUR TIER</div>}
 
                     <div className="tier-header">
@@ -143,7 +203,7 @@ export default function UpgradePopup({
 
                     <ul className="tier-features">
                       {tier.features.map((feature, idx) => (
-                        <li key={idx}>✓ {feature}</li>
+                        <li key={idx}>{feature}</li>
                       ))}
                     </ul>
 
@@ -151,9 +211,9 @@ export default function UpgradePopup({
                       className="tier-buy-btn"
                       style={{ backgroundColor: tier.color }}
                       onClick={() => handlePurchaseTier(key)}
-                      disabled={isCurrentTier || isLowerTier}
+                      disabled={isCurrentTier || isLowerTier || isLoading}
                     >
-                      {isCurrentTier ? 'Current' : isLowerTier ? 'Owned' : `Get ${tier.name}`}
+                      {isLoadingThis ? 'Loading...' : isCurrentTier ? 'Current' : isLowerTier ? 'Owned' : `Get ${tier.name}`}
                     </button>
                   </div>
                 );
@@ -167,8 +227,9 @@ export default function UpgradePopup({
             <button
               className="upgrade-coins-btn"
               onClick={() => setShowCoinPacks(true)}
+              disabled={isLoading}
             >
-              💰 Just need coins? Buy a coin pack
+              Just need coins? Buy a coin pack
             </button>
           </>
         ) : (
@@ -176,30 +237,35 @@ export default function UpgradePopup({
             <button
               className="upgrade-back-btn"
               onClick={() => setShowCoinPacks(false)}
+              disabled={isLoading}
             >
-              ← Back to tiers
+              Back to tiers
             </button>
 
             <div className="coin-packs">
-              {COIN_PACKS.map((pack) => (
-                <div key={pack.name} className="coin-pack-card">
-                  <div className="coin-pack-amount">
-                    💰 {pack.coins}
-                    {pack.bonus && <span className="coin-bonus">{pack.bonus}</span>}
+              {COIN_PACKS.map((pack) => {
+                const isLoadingThis = isLoading && loadingItem === pack.name;
+                return (
+                  <div key={pack.name} className="coin-pack-card">
+                    <div className="coin-pack-amount">
+                      {pack.coins}
+                      {pack.bonus && <span className="coin-bonus">{pack.bonus}</span>}
+                    </div>
+                    <button
+                      className="coin-pack-btn"
+                      onClick={() => handlePurchaseCoins(pack)}
+                      disabled={isLoading}
+                    >
+                      {isLoadingThis ? '...' : pack.price}
+                    </button>
                   </div>
-                  <button
-                    className="coin-pack-btn"
-                    onClick={() => handlePurchaseCoins(pack)}
-                  >
-                    {pack.price}
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
 
-        <button className="upgrade-later-btn" onClick={onClose}>
+        <button className="upgrade-later-btn" onClick={onClose} disabled={isLoading}>
           Maybe Later
         </button>
       </div>
