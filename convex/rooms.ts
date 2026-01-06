@@ -36,6 +36,11 @@ export const createUser = mutation({
       avatar: args.avatar,
       platform: args.platform,
       metaId: args.metaId,
+      // Initialize monetization fields
+      tier: "free",
+      coins: 50, // Free tier starting coins
+      totalCoinsEarned: 50,
+      totalCoinsSpent: 0,
     });
     return userId;
   },
@@ -66,12 +71,17 @@ export const getOrCreateUser = mutation({
       return existingUser._id;
     }
 
-    // Create new user
+    // Create new user with monetization fields
     const userId = await ctx.db.insert("users", {
       metaId: args.metaId,
       name: args.name,
       avatar: args.avatar,
       platform: args.platform,
+      // Initialize monetization fields
+      tier: "free",
+      coins: 50, // Free tier starting coins
+      totalCoinsEarned: 50,
+      totalCoinsSpent: 0,
     });
     return userId;
   },

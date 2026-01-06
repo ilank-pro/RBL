@@ -3,6 +3,16 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import gameData from '../data/gameData.json'; // Fallback for migration period
 import { useAudio } from '../contexts/AudioContext';
+import UpgradePopup from './UpgradePopup';
+
+// Hint costs by level (matches convex/coins.ts)
+const HINT_COSTS = {
+  1: 5,   // Level 1: 5 coins
+  2: 10,  // Level 2: 10 coins
+  3: 20,  // Level 3: 20 coins
+  4: 35,  // Level 4: 35 coins
+  5: 50,  // Level 5: 50 coins
+};
 
 const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
   const { playSound, startBgMusic, stopBgMusic } = useAudio();
@@ -14,21 +24,35 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
   const [showConfetti, setShowConfetti] = useState(false);
   const [confettiMessage, setConfettiMessage] = useState('');
   const [isWinner, setIsWinner] = useState(false);
-  const [hintRevealed, setHintRevealed] = useState(0); // 0, 1, 2 letters revealed
+  const [hintsUsed, setHintsUsed] = useState([]); // Array of hint levels already used
+  const [displayedHint, setDisplayedHint] = useState(null); // Currently displayed hint text
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [receivedEmoji, setReceivedEmoji] = useState(null);
   const [emojiSenderName, setEmojiSenderName] = useState('');
   const [gameStarted, setGameStarted] = useState(false);
+  const [skipsUsed, setSkipsUsed] = useState(0);
+  const [showUpgradePopup, setShowUpgradePopup] = useState(false);
+  const [upgradePopupTrigger, setUpgradePopupTrigger] = useState(null);
   const recognitionRef = useRef(null);
   const lastEmojiAtRef = useRef(null);
 
   const gameState = useQuery(api.games.getGameState, { roomId });
   const puzzles = useQuery(api.puzzles.getActivePuzzles);
+  const userMonetization = useQuery(api.coins.getUserMonetization, { userId: user.userId });
   const checkAnswer = useMutation(api.games.checkAnswer);
   const nextRound = useMutation(api.games.nextRound);
   const skipRound = useMutation(api.games.skipRound);
   const sendEmojiMutation = useMutation(api.games.sendEmoji);
   const giveUpMutation = useMutation(api.games.giveUp);
+  const spendCoinsMutation = useMutation(api.coins.spendCoins);
+
+  // Get user tier and coins
+  const userTier = userMonetization?.tier ?? 'free';
+  const userCoins = userMonetization?.coins ?? 0;
+  const canSendEmoji = userTier !== 'free'; // Bronze+ can send emojis
+  const canSkipCard = userTier === 'gold' || userTier === 'platinum'; // Gold+ can skip
+  const maxSkipsPerGame = userTier === 'platinum' ? 3 : userTier === 'gold' ? 1 : 0;
+  const maxHints = 5; // Maximum hint levels available
 
   // Get current puzzle - use database puzzles if available, fallback to static gameData
   const getCurrentPuzzle = () => {
@@ -85,7 +109,8 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
       setTimeLeft(90);
       setAnswer('');
       setRoundFeedback(null);
-      setHintRevealed(0);
+      setHintsUsed([]);
+      setDisplayedHint(null);
       setShowEmojiPicker(false);
     }
   }, [gameState?.currentRound]);
@@ -267,20 +292,94 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  const getHint = () => {
-    if (!currentItem) return '';
-    // Handle both database and static puzzle formats
-    const answerText = isUsingDatabase
-      ? currentItem.answer
-      : currentItem.answer.split(',')[0].trim();
-    if (hintRevealed === 0) return '';
-    return answerText.slice(0, hintRevealed).toUpperCase() + '...';
+  // Get available hints from the current puzzle sorted by score
+  const getAvailableHints = () => {
+    if (!currentItem || !isUsingDatabase) return [];
+    const hints = currentItem.hints || [];
+    // Sort by score (1=easiest, 5=hardest/biggest hint)
+    return [...hints].sort((a, b) => a.score - b.score);
   };
 
-  const handleHint = () => {
-    if (hintRevealed < 2) {
-      setHintRevealed(hintRevealed + 1);
+  // Get the next hint that hasn't been used yet
+  const getNextHint = () => {
+    const availableHints = getAvailableHints();
+    // Find first hint that hasn't been used
+    for (const hint of availableHints) {
+      if (!hintsUsed.includes(hint.score)) {
+        return hint;
+      }
     }
+    return null;
+  };
+
+  const getNextHintCost = () => {
+    const nextHint = getNextHint();
+    if (!nextHint) return 0;
+    return HINT_COSTS[nextHint.score] || 5;
+  };
+
+  const handleHint = async () => {
+    const availableHints = getAvailableHints();
+
+    // Check if card has any hints
+    if (availableHints.length === 0) {
+      setDisplayedHint({ text: 'No hints for this card at the moment', isError: true });
+      setTimeout(() => setDisplayedHint(null), 5000);
+      return;
+    }
+
+    const nextHint = getNextHint();
+
+    // Check if all hints have been used
+    if (!nextHint) {
+      setDisplayedHint({ text: 'All hints used for this card!', isError: true });
+      setTimeout(() => setDisplayedHint(null), 5000);
+      return;
+    }
+
+    const cost = HINT_COSTS[nextHint.score] || 5;
+
+    // Check if user has enough coins
+    if (userCoins < cost) {
+      setUpgradePopupTrigger('hint');
+      setShowUpgradePopup(true);
+      return;
+    }
+
+    try {
+      // Deduct coins
+      const result = await spendCoinsMutation({
+        userId: user.userId,
+        amount: cost,
+        reason: `hint_level_${nextHint.score}`,
+      });
+
+      if (result.success) {
+        // Mark this hint level as used
+        setHintsUsed([...hintsUsed, nextHint.score]);
+
+        // Display the hint text on the card
+        setDisplayedHint({ text: nextHint.text, isError: false });
+        setRoundFeedback(`-${cost} coins for hint`);
+
+        // Hide hint after 5 seconds
+        setTimeout(() => setDisplayedHint(null), 5000);
+        setTimeout(() => setRoundFeedback(null), 1500);
+      } else {
+        // Not enough coins
+        setUpgradePopupTrigger('hint');
+        setShowUpgradePopup(true);
+      }
+    } catch (err) {
+      console.error('Failed to use hint:', err);
+    }
+  };
+
+  // Check if more hints are available
+  const hasMoreHints = () => {
+    const availableHints = getAvailableHints();
+    if (availableHints.length === 0) return true; // Allow click to show "no hints" message
+    return hintsUsed.length < availableHints.length;
   };
 
   const handleGiveUp = async () => {
@@ -295,11 +394,46 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
     }
   };
 
+  const handleSkipCard = async () => {
+    if (!canSkipCard) {
+      setUpgradePopupTrigger('skip');
+      setShowUpgradePopup(true);
+      return;
+    }
+
+    if (skipsUsed >= maxSkipsPerGame) {
+      setRoundFeedback('No skips remaining!');
+      setTimeout(() => setRoundFeedback(null), 1500);
+      return;
+    }
+
+    try {
+      await skipRound({ roomId });
+      setSkipsUsed(skipsUsed + 1);
+      setRoundFeedback('Card skipped!');
+      setTimeout(() => setRoundFeedback(null), 1500);
+    } catch (err) {
+      console.error('Failed to skip card:', err);
+    }
+  };
+
+  const skipsRemaining = maxSkipsPerGame - skipsUsed;
+
   // Check if current player gave up
   const myGaveUp = isHost ? gameState?.hostGaveUp : gameState?.guestGaveUp;
   const opponentGaveUp = isHost ? gameState?.guestGaveUp : gameState?.hostGaveUp;
 
   const emojis = ['😄', '😅', '🤔', '😱', '🔥', '👏', '💪', '🎉'];
+
+  const handleEmojiButtonClick = () => {
+    if (!canSendEmoji) {
+      // Show upgrade popup for free tier users
+      setUpgradePopupTrigger('emoji');
+      setShowUpgradePopup(true);
+      return;
+    }
+    setShowEmojiPicker(!showEmojiPicker);
+  };
 
   const sendEmoji = async (emoji) => {
     try {
@@ -347,8 +481,13 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
         </div>
       </header>
 
-      <div className="round-indicator">
-        Round {gameState.currentRound} of {gameState.totalRounds}
+      <div className="game-info-bar">
+        <div className="round-indicator">
+          Round {gameState.currentRound} of {gameState.totalRounds}
+        </div>
+        <div className="coin-balance">
+          💰 {userCoins}
+        </div>
       </div>
 
       {roundFeedback && (
@@ -371,6 +510,12 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
             alt="Game Challenge"
             className="game-image"
           />
+          {displayedHint && (
+            <div className={`hint-overlay ${displayedHint.isError ? 'error' : 'success'}`}>
+              <div className="hint-icon">💡</div>
+              <div className="hint-text">{displayedHint.text}</div>
+            </div>
+          )}
           {showConfetti && (
             <div className={`confetti-explosion ${isWinner ? 'winner' : 'loser'}`}>
               <div className="confetti-message">{confettiMessage}</div>
@@ -422,8 +567,10 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
       </div>
 
       <div className="controls">
-        <button className="btn-game btn-hint" onClick={handleHint} disabled={hintRevealed >= 2}>
-          {hintRevealed > 0 ? `Hint: ${getHint()}` : 'Hint'}
+        <button className="btn-game btn-hint" onClick={handleHint} disabled={!hasMoreHints() && getAvailableHints().length > 0}>
+          {hintsUsed.length > 0
+            ? `Hint (${hintsUsed.length} used)`
+            : `Hint (${getNextHintCost()}💰)`}
         </button>
         <button
           className={`btn-game btn-giveup ${myGaveUp ? 'gave-up' : ''}`}
@@ -435,8 +582,8 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
             : 'Give Up'}
         </button>
         <div className="emoji-container">
-          <button className="btn-game btn-emoji" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
-            Send Emoji
+          <button className="btn-game btn-emoji" onClick={handleEmojiButtonClick}>
+            {canSendEmoji ? 'Send Emoji' : '⭐ Emoji'}
           </button>
           {showEmojiPicker && (
             <div className="emoji-picker">
@@ -448,6 +595,21 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Skip button row - Gold+ only */}
+      <div className="controls controls-secondary">
+        <button
+          className={`btn-game btn-skip ${!canSkipCard ? 'locked' : ''}`}
+          onClick={handleSkipCard}
+          disabled={canSkipCard && skipsRemaining <= 0}
+        >
+          {!canSkipCard
+            ? '⭐ Skip Card'
+            : skipsRemaining > 0
+              ? `Skip Card (${skipsRemaining} left)`
+              : 'No Skips Left'}
+        </button>
       </div>
 
       <div className="input-area">
@@ -473,6 +635,25 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
           {isListening ? '🛑' : '🎤'}
         </button>
       </div>
+
+      {/* Upgrade Popup */}
+      <UpgradePopup
+        isOpen={showUpgradePopup}
+        onClose={() => setShowUpgradePopup(false)}
+        trigger={upgradePopupTrigger}
+        currentTier={userTier}
+        currentCoins={userCoins}
+        onPurchaseTier={(tier) => {
+          console.log('Purchase tier:', tier);
+          // TODO: Integrate Stripe checkout
+          setShowUpgradePopup(false);
+        }}
+        onPurchaseCoins={(pack) => {
+          console.log('Purchase coins:', pack);
+          // TODO: Integrate Stripe checkout
+          setShowUpgradePopup(false);
+        }}
+      />
     </div>
   );
 };

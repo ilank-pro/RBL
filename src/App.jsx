@@ -293,6 +293,8 @@ function AppContent() {
             host={gameResults?.host}
             guest={gameResults?.guest}
             isHost={isHost}
+            roomId={roomId}
+            userId={user?.userId}
             onPlayAgain={handlePlayAgain}
             onExit={handleExit}
           />

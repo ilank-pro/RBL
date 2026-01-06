@@ -340,3 +340,46 @@ export const clearEmoji = mutation({
     return { cleared: true };
   },
 });
+
+// Award coins at game end
+export const awardGameEndCoins = mutation({
+  args: {
+    roomId: v.id("rooms"),
+    userId: v.id("users"),
+    isWinner: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    if (!user) throw new Error("User not found");
+
+    const room = await ctx.db.get(args.roomId);
+    if (!room) throw new Error("Room not found");
+
+    // Only award if game is finished
+    if (room.status !== "finished") {
+      return { awarded: false, reason: "game_not_finished" };
+    }
+
+    // Award coins: 15 for win, 5 for loss
+    const coinsToAward = args.isWinner ? 15 : 5;
+    const currentCoins = user.coins ?? 0;
+    const totalEarned = user.totalCoinsEarned ?? 0;
+
+    // Update user's coins
+    await ctx.db.patch(args.userId, {
+      coins: currentCoins + coinsToAward,
+      totalCoinsEarned: totalEarned + coinsToAward,
+    });
+
+    // Log transaction
+    await ctx.db.insert("transactions", {
+      userId: args.userId,
+      type: "earn",
+      amount: coinsToAward,
+      reason: args.isWinner ? "game_win" : "game_loss",
+      createdAt: Date.now(),
+    });
+
+    return { awarded: true, coins: coinsToAward };
+  },
+});

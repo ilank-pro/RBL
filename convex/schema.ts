@@ -7,7 +7,28 @@ export default defineSchema({
     avatar: v.string(),
     platform: v.union(v.literal("facebook"), v.literal("instagram"), v.literal("mock")),
     metaId: v.optional(v.string()),
+    // Monetization fields
+    tier: v.optional(v.union(
+      v.literal("free"),
+      v.literal("bronze"),
+      v.literal("gold"),
+      v.literal("platinum")
+    )),
+    tierPurchasedAt: v.optional(v.number()),
+    coins: v.optional(v.number()),
+    lastCoinBonusAt: v.optional(v.number()),
+    totalCoinsEarned: v.optional(v.number()),
+    totalCoinsSpent: v.optional(v.number()),
+    lastDailyLoginAt: v.optional(v.number()),
   }).index("by_metaId", ["metaId"]),
+
+  transactions: defineTable({
+    userId: v.id("users"),
+    type: v.union(v.literal("purchase"), v.literal("earn"), v.literal("spend")),
+    amount: v.number(),
+    reason: v.string(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
 
   rooms: defineTable({
     code: v.string(),
@@ -28,6 +49,13 @@ export default defineSchema({
     // Give up fields
     hostGaveUp: v.optional(v.boolean()),
     guestGaveUp: v.optional(v.boolean()),
+    // Game settings (based on host tier)
+    timePerCard: v.optional(v.number()), // seconds (30-300)
+    hostSkipsRemaining: v.optional(v.number()),
+    guestSkipsRemaining: v.optional(v.number()),
+    // Hint tracking per game
+    hostHintsUsed: v.optional(v.number()),
+    guestHintsUsed: v.optional(v.number()),
   }).index("by_code", ["code"]),
 
   rounds: defineTable({

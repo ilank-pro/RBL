@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as coins from "../coins.js";
 import type * as games from "../games.js";
 import type * as migration from "../migration.js";
 import type * as puzzles from "../puzzles.js";
@@ -20,6 +21,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  coins: typeof coins;
   games: typeof games;
   migration: typeof migration;
   puzzles: typeof puzzles;
