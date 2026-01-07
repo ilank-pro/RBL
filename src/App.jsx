@@ -130,6 +130,8 @@ function AppContent() {
             if (parsedUser.firebaseUid === firebaseUser.uid) {
               setUser(parsedUser);
               setScreen(SCREENS.LOBBY);
+              setIsRestoring(false);
+              return;
             } else {
               // Mismatch - clear and re-sync
               localStorage.removeItem(USER_STORAGE_KEY);
@@ -138,6 +140,37 @@ function AppContent() {
             console.error('Failed to restore session:', err);
             localStorage.removeItem(USER_STORAGE_KEY);
           }
+        }
+
+        // No valid saved user - sync with Convex (handles guest->authenticated transition)
+        try {
+          const userData = {
+            firebaseUid: firebaseUser.uid,
+            name: firebaseUser.displayName || 'Player',
+            avatar: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
+            provider: firebaseUser.providerData[0]?.providerId || 'unknown',
+          };
+
+          const userId = await getOrCreateUser({
+            firebaseUid: userData.firebaseUid,
+            name: userData.name,
+            avatar: userData.avatar,
+            provider: userData.provider,
+          });
+
+          const newUser = {
+            userId: userId,
+            firebaseUid: userData.firebaseUid,
+            name: userData.name,
+            avatar: userData.avatar,
+            provider: userData.provider,
+          };
+
+          setUser(newUser);
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(newUser));
+          setScreen(SCREENS.LOBBY);
+        } catch (err) {
+          console.error('Failed to sync user with Convex:', err);
         }
       } else {
         // User is signed out

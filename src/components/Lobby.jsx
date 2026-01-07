@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import UpgradePopup from './UpgradePopup';
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 
 // Monthly bonus amounts by tier
 const TIER_MONTHLY_BONUS = {
@@ -51,6 +52,8 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
 
   const canCustomize = userTier !== 'free';
   const isGuest = user?.provider === 'guest';
+
+  const { signInWithGoogle, signInWithApple, signInWithFacebook } = useFirebaseAuth();
 
   // Check and claim monthly bonus on mount (for paid tiers)
   useEffect(() => {
@@ -341,6 +344,10 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
         currentTier={userTier}
         currentCoins={userCoins}
         userId={user?.userId}
+        isGuest={isGuest}
+        onSignInWithGoogle={signInWithGoogle}
+        onSignInWithApple={signInWithApple}
+        onSignInWithFacebook={signInWithFacebook}
         onPurchaseTier={(tier) => {
           console.log('Purchase tier:', tier);
           setShowUpgradePopup(false);

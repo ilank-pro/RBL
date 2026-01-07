@@ -66,10 +66,16 @@ export default function UpgradePopup({
   userId,
   onPurchaseTier,
   onPurchaseCoins,
+  isGuest = false,
+  onSignInWithGoogle,
+  onSignInWithApple,
+  onSignInWithFacebook,
 }) {
   const [showCoinPacks, setShowCoinPacks] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingItem, setLoadingItem] = useState(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [loginLoading, setLoginLoading] = useState(false);
 
   const createCheckoutSession = useAction(api.payments.createCheckoutSession);
 
@@ -93,6 +99,11 @@ export default function UpgradePopup({
   };
 
   const handlePurchaseTier = async (tier) => {
+    if (isGuest) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
     if (!userId) {
       console.error('No userId provided for checkout');
       return;
@@ -127,6 +138,11 @@ export default function UpgradePopup({
   };
 
   const handlePurchaseCoins = async (pack) => {
+    if (isGuest) {
+      setShowLoginPrompt(true);
+      return;
+    }
+
     if (!userId) {
       console.error('No userId provided for checkout');
       return;
@@ -160,10 +176,67 @@ export default function UpgradePopup({
     }
   };
 
+  const handleSignIn = async (provider) => {
+    setLoginLoading(true);
+    try {
+      if (provider === 'google' && onSignInWithGoogle) {
+        await onSignInWithGoogle();
+      } else if (provider === 'apple' && onSignInWithApple) {
+        await onSignInWithApple();
+      } else if (provider === 'facebook' && onSignInWithFacebook) {
+        await onSignInWithFacebook();
+      }
+      setShowLoginPrompt(false);
+    } catch (err) {
+      console.error('Sign-in failed:', err);
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
   return (
     <div className="upgrade-popup-overlay" onClick={onClose}>
       <div className="upgrade-popup" onClick={(e) => e.stopPropagation()}>
         <button className="upgrade-close-btn" onClick={onClose}>×</button>
+
+        {showLoginPrompt && (
+          <div className="login-prompt-overlay" onClick={() => setShowLoginPrompt(false)}>
+            <div className="login-prompt" onClick={(e) => e.stopPropagation()}>
+              <h3>Sign In Required</h3>
+              <p>Sign in with your account to make purchases</p>
+              <div className="login-prompt-buttons">
+                <button
+                  className="login-btn login-btn-google"
+                  onClick={() => handleSignIn('google')}
+                  disabled={loginLoading}
+                >
+                  {loginLoading ? '...' : 'Google'}
+                </button>
+                <button
+                  className="login-btn login-btn-apple"
+                  onClick={() => handleSignIn('apple')}
+                  disabled={loginLoading}
+                >
+                  {loginLoading ? '...' : 'Apple'}
+                </button>
+                <button
+                  className="login-btn login-btn-facebook"
+                  onClick={() => handleSignIn('facebook')}
+                  disabled={loginLoading}
+                >
+                  {loginLoading ? '...' : 'Facebook'}
+                </button>
+              </div>
+              <button
+                className="login-prompt-cancel"
+                onClick={() => setShowLoginPrompt(false)}
+                disabled={loginLoading}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
 
         <h2 className="upgrade-title">{getTriggerMessage()}</h2>
 

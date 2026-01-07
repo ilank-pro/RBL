@@ -4,6 +4,7 @@ import { api } from '../../convex/_generated/api';
 import gameData from '../data/gameData.json'; // Fallback for migration period
 import { useAudio } from '../contexts/AudioContext';
 import UpgradePopup from './UpgradePopup';
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 
 // Hint costs by level (matches convex/coins.ts)
 const HINT_COSTS = {
@@ -49,6 +50,8 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
   // Get user tier and coins
   const userTier = userMonetization?.tier ?? 'free';
   const userCoins = userMonetization?.coins ?? 0;
+  const isGuest = user?.provider === 'guest';
+  const { signInWithGoogle, signInWithApple, signInWithFacebook } = useFirebaseAuth();
   const canSendEmoji = userTier !== 'free'; // Bronze+ can send emojis
   const canSkipCard = userTier === 'gold' || userTier === 'platinum'; // Gold+ can skip
   const maxSkipsPerGame = userTier === 'platinum' ? 3 : userTier === 'gold' ? 1 : 0;
@@ -647,6 +650,10 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
         currentTier={userTier}
         currentCoins={userCoins}
         userId={user?.userId}
+        isGuest={isGuest}
+        onSignInWithGoogle={signInWithGoogle}
+        onSignInWithApple={signInWithApple}
+        onSignInWithFacebook={signInWithFacebook}
         onPurchaseTier={(tier) => {
           console.log('Purchase tier:', tier);
           setShowUpgradePopup(false);
