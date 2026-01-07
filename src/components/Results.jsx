@@ -34,7 +34,7 @@ const Results = ({ hostScore, guestScore, host, guest, isHost, onPlayAgain, onEx
         const result = await awardCoins({
           roomId,
           userId,
-          isWinner: isWinner || isTie, // Ties count as wins for coin purposes
+          isWinner: isWinner, // Ties now give same coins as losses (5)
         });
         if (result.awarded) {
           setCoinsAwarded(result.coins);

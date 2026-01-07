@@ -85,6 +85,8 @@ export default function UpgradePopup({
         return 'Upgrade to customize your game!';
       case 'skip':
         return 'Skip cards with Gold or Platinum!';
+      case 'tier':
+        return 'Explore Subscription Plans';
       default:
         return 'Upgrade Your Game!';
     }

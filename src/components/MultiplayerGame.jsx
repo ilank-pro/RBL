@@ -16,7 +16,7 @@ const HINT_COSTS = {
 
 const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
   const { playSound, startBgMusic, stopBgMusic } = useAudio();
-  const [timeLeft, setTimeLeft] = useState(90);
+  const [timeLeft, setTimeLeft] = useState(null); // Will be set from gameState.timePerCard
   const [answer, setAnswer] = useState('');
   const [isListening, setIsListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(true);
@@ -90,7 +90,7 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
 
   // Timer countdown
   useEffect(() => {
-    if (!gameState || gameState.status !== 'playing') return;
+    if (!gameState || gameState.status !== 'playing' || timeLeft === null) return;
 
     if (timeLeft > 0) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
@@ -103,17 +103,17 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
     }
   }, [timeLeft, gameState?.status]);
 
-  // Reset timer when round changes
+  // Reset timer when round changes or initialize on first load
   useEffect(() => {
     if (gameState?.currentRound) {
-      setTimeLeft(90);
+      setTimeLeft(gameState.timePerCard || 90);
       setAnswer('');
       setRoundFeedback(null);
       setHintsUsed([]);
       setDisplayedHint(null);
       setShowEmojiPicker(false);
     }
-  }, [gameState?.currentRound]);
+  }, [gameState?.currentRound, gameState?.timePerCard]);
 
   // Check for game end
   useEffect(() => {
@@ -287,6 +287,7 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
   };
 
   const formatTime = (seconds) => {
+    if (seconds === null) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
@@ -568,9 +569,11 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
 
       <div className="controls">
         <button className="btn-game btn-hint" onClick={handleHint} disabled={!hasMoreHints() && getAvailableHints().length > 0}>
-          {hintsUsed.length > 0
-            ? `Hint (${hintsUsed.length} used)`
-            : `Hint (${getNextHintCost()}💰)`}
+          {getNextHint()
+            ? `Hint (${getNextHintCost()}💰)`
+            : getAvailableHints().length > 0
+              ? 'All hints used'
+              : 'Hint'}
         </button>
         <button
           className={`btn-game btn-giveup ${myGaveUp ? 'gave-up' : ''}`}

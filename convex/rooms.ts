@@ -97,6 +97,7 @@ export const createRoom = mutation({
   args: {
     hostId: v.id("users"),
     totalRounds: v.number(),
+    timePerCard: v.optional(v.number()), // seconds per card (30-300)
     totalPuzzles: v.optional(v.number()), // Deprecated: now fetched from DB
   },
   handler: async (ctx, args) => {
@@ -137,6 +138,7 @@ export const createRoom = mutation({
       hostScore: 0,
       guestScore: 0,
       totalRounds: args.totalRounds,
+      timePerCard: args.timePerCard || 90, // Default to 90 seconds
       createdAt: Date.now(),
     });
 

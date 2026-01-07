@@ -288,6 +288,7 @@ export const getGameState = query({
       hostScore: room.hostScore,
       guestScore: room.guestScore,
       roundWinner: room.roundWinner,
+      timePerCard: room.timePerCard || 90, // Default to 90 seconds
       host: host ? { id: host._id, name: host.name, avatar: host.avatar } : null,
       guest: guest ? { id: guest._id, name: guest.name, avatar: guest.avatar } : null,
       // Emoji data

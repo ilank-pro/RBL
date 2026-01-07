@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import UpgradePopup from './UpgradePopup';
 
@@ -31,12 +31,15 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
   const [selectedRounds, setSelectedRounds] = useState(5);
   const [selectedTime, setSelectedTime] = useState(90);
   const [showUpgradePopup, setShowUpgradePopup] = useState(false);
+  const [upgradePopupTrigger, setUpgradePopupTrigger] = useState('settings');
   const [bonusNotification, setBonusNotification] = useState(null);
   const [bonusChecked, setBonusChecked] = useState(false);
+  const [isManagingSubscription, setIsManagingSubscription] = useState(false);
 
   const createRoom = useMutation(api.rooms.createRoom);
   const joinRoom = useMutation(api.rooms.joinRoom);
   const claimMonthlyBonus = useMutation(api.coins.claimMonthlyBonus);
+  const createBillingPortalSession = useAction(api.payments.createBillingPortalSession);
   const userMonetization = useQuery(
     api.coins.getUserMonetization,
     user?.userId ? { userId: user.userId } : "skip"
@@ -47,6 +50,7 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
   const tierSettings = TIER_SETTINGS[userTier] || TIER_SETTINGS.free;
 
   const canCustomize = userTier !== 'free';
+  const isGuest = user?.provider === 'guest';
 
   // Check and claim monthly bonus on mount (for paid tiers)
   useEffect(() => {
@@ -83,6 +87,26 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
   const isRoundOptionAvailable = (rounds) => rounds <= tierSettings.maxRounds;
   const isTimeOptionAvailable = (time) => time >= tierSettings.minTime && time <= tierSettings.maxTime;
 
+  // Determine required tier for a locked option
+  const getRequiredTierForRounds = (rounds) => {
+    if (rounds <= 5) return null;
+    if (rounds <= 10) return 'Bronze';
+    if (rounds <= 15) return 'Gold';
+    return 'Platinum';
+  };
+
+  const getRequiredTierForTime = (time) => {
+    if (time >= 90 && time <= 90) return null; // Free tier default
+    if (time >= 60 && time <= 120) return 'Bronze';
+    if (time >= 45 && time <= 180) return 'Gold';
+    return 'Platinum';
+  };
+
+  const handleUpgradeFromTooltip = () => {
+    setUpgradePopupTrigger('settings');
+    setShowUpgradePopup(true);
+  };
+
   const handleCreateRoom = async () => {
     setIsCreating(true);
     setError('');
@@ -90,6 +114,7 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
       const result = await createRoom({
         hostId: user.userId,
         totalRounds: selectedRounds,
+        timePerCard: selectedTime,
         totalPuzzles: 59,
       });
       onRoomCreated(result.roomId, result.code);
@@ -124,10 +149,28 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
 
   const handleSettingsClick = () => {
     if (!canCustomize) {
+      setUpgradePopupTrigger('settings');
       setShowUpgradePopup(true);
       return;
     }
     setShowSettings(!showSettings);
+  };
+
+  const handleManageSubscription = async () => {
+    if (!user?.userId) return;
+
+    setIsManagingSubscription(true);
+    try {
+      const result = await createBillingPortalSession({ userId: user.userId });
+      if (result.url) {
+        window.location.href = result.url;
+      }
+    } catch (error) {
+      console.error('Failed to open billing portal:', error);
+      alert('Unable to open subscription management. Please try again.');
+    } finally {
+      setIsManagingSubscription(false);
+    }
   };
 
   return (
@@ -147,28 +190,53 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
       <div className="lobby-header">
         <img src={user.avatar} alt={user.name} className="lobby-avatar" />
         <h2>Welcome, {user.name}!</h2>
-        <div className="lobby-tier-badge" data-tier={userTier}>
+        <div
+          className="lobby-tier-badge"
+          data-tier={userTier}
+          onClick={() => {
+            setUpgradePopupTrigger('tier');
+            setShowUpgradePopup(true);
+          }}
+          style={{ cursor: 'pointer' }}
+        >
           {userTier === 'free' ? '🆓' : userTier === 'bronze' ? '🥉' : userTier === 'gold' ? '🥇' : '💎'} {userTier.charAt(0).toUpperCase() + userTier.slice(1)}
         </div>
         <div className="lobby-coins">💰 {userCoins}</div>
+        {userTier !== 'free' && (
+          <button
+            className="btn-manage-subscription"
+            onClick={handleManageSubscription}
+            disabled={isManagingSubscription}
+          >
+            {isManagingSubscription ? '...' : '⚙️ Manage'}
+          </button>
+        )}
       </div>
 
       <div className="lobby-actions">
         <div className="create-room-section">
-          <button
-            className="btn-lobby btn-create"
-            onClick={handleCreateRoom}
-            disabled={isCreating}
-          >
-            {isCreating ? 'Creating...' : 'Create Room'}
-          </button>
+          {isGuest ? (
+            <div className="guest-notice">
+              Sign in with Google, Apple, or Facebook to create rooms
+            </div>
+          ) : (
+            <>
+              <button
+                className="btn-lobby btn-create"
+                onClick={handleCreateRoom}
+                disabled={isCreating}
+              >
+                {isCreating ? 'Creating...' : 'Create Room'}
+              </button>
 
-          <button
-            className={`btn-settings ${canCustomize ? '' : 'locked'}`}
-            onClick={handleSettingsClick}
-          >
-            {canCustomize ? '✨ Settings' : '⭐ Upgrade'}
-          </button>
+              <button
+                className={`btn-settings ${canCustomize ? '' : 'locked'}`}
+                onClick={handleSettingsClick}
+              >
+                {canCustomize ? '✨ Settings' : '⭐ Upgrade'}
+              </button>
+            </>
+          )}
         </div>
 
         {showSettings && canCustomize && (
@@ -176,34 +244,62 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
             <div className="settings-group">
               <label>Rounds per game:</label>
               <div className="settings-options">
-                {ROUND_OPTIONS.map((rounds) => (
-                  <button
-                    key={rounds}
-                    className={`settings-option ${selectedRounds === rounds ? 'selected' : ''} ${!isRoundOptionAvailable(rounds) ? 'locked' : ''}`}
-                    onClick={() => isRoundOptionAvailable(rounds) && setSelectedRounds(rounds)}
-                    disabled={!isRoundOptionAvailable(rounds)}
-                  >
-                    {rounds}
-                    {!isRoundOptionAvailable(rounds) && ' ⭐'}
-                  </button>
-                ))}
+                {ROUND_OPTIONS.map((rounds) => {
+                  const isLocked = !isRoundOptionAvailable(rounds);
+                  const requiredTier = getRequiredTierForRounds(rounds);
+
+                  return (
+                    <div key={rounds} className="settings-option-wrapper">
+                      <button
+                        className={`settings-option ${selectedRounds === rounds ? 'selected' : ''} ${isLocked ? 'locked' : ''}`}
+                        onClick={() => !isLocked && setSelectedRounds(rounds)}
+                        disabled={isLocked}
+                      >
+                        {rounds}
+                        {isLocked && ' ⭐'}
+                      </button>
+                      {isLocked && requiredTier && (
+                        <div className="settings-tooltip">
+                          <span>Upgrade to {requiredTier} to unlock</span>
+                          <button className="tooltip-upgrade-btn" onClick={handleUpgradeFromTooltip}>
+                            Upgrade
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
             <div className="settings-group">
               <label>Time per card:</label>
               <div className="settings-options">
-                {TIME_OPTIONS.map((time) => (
-                  <button
-                    key={time}
-                    className={`settings-option ${selectedTime === time ? 'selected' : ''} ${!isTimeOptionAvailable(time) ? 'locked' : ''}`}
-                    onClick={() => isTimeOptionAvailable(time) && setSelectedTime(time)}
-                    disabled={!isTimeOptionAvailable(time)}
-                  >
-                    {time}s
-                    {!isTimeOptionAvailable(time) && ' ⭐'}
-                  </button>
-                ))}
+                {TIME_OPTIONS.map((time) => {
+                  const isLocked = !isTimeOptionAvailable(time);
+                  const requiredTier = getRequiredTierForTime(time);
+
+                  return (
+                    <div key={time} className="settings-option-wrapper">
+                      <button
+                        className={`settings-option ${selectedTime === time ? 'selected' : ''} ${isLocked ? 'locked' : ''}`}
+                        onClick={() => !isLocked && setSelectedTime(time)}
+                        disabled={isLocked}
+                      >
+                        {time}s
+                        {isLocked && ' ⭐'}
+                      </button>
+                      {isLocked && requiredTier && (
+                        <div className="settings-tooltip">
+                          <span>Upgrade to {requiredTier} to unlock</span>
+                          <button className="tooltip-upgrade-btn" onClick={handleUpgradeFromTooltip}>
+                            Upgrade
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -241,7 +337,7 @@ const Lobby = ({ user, onRoomCreated, onRoomJoined, onLogout }) => {
       <UpgradePopup
         isOpen={showUpgradePopup}
         onClose={() => setShowUpgradePopup(false)}
-        trigger="settings"
+        trigger={upgradePopupTrigger}
         currentTier={userTier}
         currentCoins={userCoins}
         userId={user?.userId}

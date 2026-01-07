@@ -246,3 +246,34 @@ export const getSubscriptionStatus = query({
     };
   },
 });
+
+// Create Stripe billing portal session for subscription management
+export const createBillingPortalSession = action({
+  args: {
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const Stripe = (await import("stripe")).default;
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: "2023-10-16",
+    });
+
+    // Get the user
+    const user = await ctx.runQuery(api.rooms.getUser, { userId: args.userId });
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (!user.stripeCustomerId) {
+      throw new Error("No Stripe customer found for this user");
+    }
+
+    // Create billing portal session
+    const session = await stripe.billingPortal.sessions.create({
+      customer: user.stripeCustomerId,
+      return_url: process.env.SITE_URL || "https://rbl.quest/",
+    });
+
+    return { url: session.url };
+  },
+});
