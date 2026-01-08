@@ -331,6 +331,22 @@ body {
 
 /* Responsive Landing Page */
 @media (max-width: 900px) {
+  /* Allow scrolling on mobile */
+  body {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #root {
+    height: auto;
+    min-height: 100vh;
+  }
+
+  /* Hide ornaments completely on mobile for performance */
+  .background-decorations {
+    display: none !important;
+  }
+
   /* Keep body/root fixed - only landing container scrolls */
   .landing-page-container {
     flex-direction: column;
@@ -369,6 +385,12 @@ body {
   .btn-social {
     width: 100%;
     max-width: 320px;
+  }
+
+  /* Make game container scrollable on mobile */
+  .game-container {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 

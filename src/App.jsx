@@ -34,8 +34,14 @@ const Ornaments = () => {
 
   // Reduce ornaments on mobile for performance
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 900;
-  const totalBalloons = isMobile ? 30 : 120;
-  const totalConfetti = isMobile ? 20 : 80;
+
+  // Don't render ornaments on mobile at all for performance
+  if (isMobile) {
+    return null;
+  }
+
+  const totalBalloons = 120;
+  const totalConfetti = 80;
 
   for (let i = 0; i < totalBalloons; i++) {
     balloons.push({
