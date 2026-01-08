@@ -194,22 +194,76 @@ body {
   animation: drift linear infinite;
 }
 
+/* Landing Page Layout */
+.landing-page-container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  z-index: 10;
+  position: relative;
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  overflow: hidden;
+}
+
+.landing-video-section {
+  flex: 1.2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.landing-content-section {
+  flex: 0.8;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  background: rgba(26, 26, 46, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.reel-container {
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 9 / 16;
+  background: #000;
+  border-radius: 20px;
+  border: 4px solid var(--accent-gold);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.6), 0 0 20px var(--accent-gold);
+  overflow: hidden;
+  position: relative;
+}
+
+.landing-title {
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: var(--accent-yellow);
+  text-shadow: 4px 4px 0px var(--bg-dark), 0 0 20px rgba(248, 219, 52, 0.4);
+  margin-bottom: 20px;
+  letter-spacing: -1px;
+}
+
+.landing-description {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: #e0e0e0;
+  margin-bottom: 40px;
+  text-align: left;
+  max-width: 500px;
+}
+
 /* Auth container */
 .auth-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  height: 100%;
-  text-align: center;
-  padding: 20px;
-  background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
-  border-radius: 40px;
+  width: 100%;
+  max-width: 500px;
   z-index: 10;
   position: relative;
-  max-width: 450px;
-  width: 90%;
-  box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
 }
 
 .btn-social {
@@ -255,6 +309,56 @@ body {
 
 .btn-apple:hover {
   background-color: #333333;
+}
+
+.btn-guest {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  margin-top: 20px !important;
+}
+
+.btn-guest:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Responsive Landing Page */
+@media (max-width: 900px) {
+  .landing-page-container {
+    flex-direction: column;
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .landing-video-section {
+    padding: 20px;
+    height: 60vh;
+  }
+
+  .landing-content-section {
+    padding: 30px 20px;
+    background: transparent;
+    backdrop-filter: none;
+  }
+
+  .auth-container {
+    align-items: center;
+    text-align: center;
+  }
+
+  .landing-title {
+    font-size: 2.5rem;
+  }
+
+  .landing-description {
+    text-align: center;
+  }
+
+  .btn-social {
+    width: 100%;
+    max-width: 320px;
+  }
 }
 
 /* Game container - main card */

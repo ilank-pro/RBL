@@ -55,72 +55,86 @@ const Login = ({ onLogin, pendingRoomCode }) => {
   };
 
   return (
-    <div className="auth-container">
-      <h1 style={{ marginBottom: '30px' }}>Pop Party Arcade</h1>
-      <p style={{ marginBottom: '40px' }}>
-        {pendingRoomCode ? 'Login to join the game!' : 'Login to compete!'}
-      </p>
-
-      {(loginError || error) && (
-        <div style={{
-          color: '#ff6b6b',
-          marginBottom: '20px',
-          padding: '10px',
-          background: 'rgba(255,107,107,0.1)',
-          borderRadius: '8px'
-        }}>
-          {loginError || error}
+    <div className="landing-page-container">
+      <div className="landing-video-section">
+        <div className="reel-container">
+          <iframe
+            src="https://www.facebook.com/plugins/video.php?href=https%3A%2F%2Fwww.facebook.com%2Freel%2F1759292824750080&show_text=0&t=0"
+            width="100%"
+            height="100%"
+            style={{ border: 'none', overflow: 'hidden' }}
+            scrolling="no"
+            frameBorder="0"
+            allowFullScreen={true}
+            allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+            title="RBL Games Showcase"
+          ></iframe>
         </div>
-      )}
-
-      <button
-        className="btn-social btn-google"
-        onClick={handleGoogleLogin}
-        disabled={loading}
-        style={{ opacity: loading ? 0.7 : 1 }}
-      >
-        {loading ? 'Logging in...' : 'Continue with Google'}
-      </button>
-
-      <button
-        className="btn-social btn-apple"
-        onClick={handleAppleLogin}
-        disabled={loading}
-        style={{ opacity: loading ? 0.7 : 1 }}
-      >
-        {loading ? 'Logging in...' : 'Continue with Apple'}
-      </button>
-
-      <button
-        className="btn-social btn-fb"
-        onClick={handleFacebookLogin}
-        disabled={loading}
-        style={{ opacity: loading ? 0.7 : 1 }}
-      >
-        {loading ? 'Logging in...' : 'Continue with Facebook'}
-      </button>
-
-      {/* Guest login for testing */}
-      <button
-        className="btn-social"
-        onClick={handleGuestLogin}
-        style={{
-          marginTop: '20px',
-          background: 'rgba(255,255,255,0.2)',
-          border: '1px solid rgba(255,255,255,0.3)',
-        }}
-      >
-        Continue as Guest
-      </button>
-
-      <div style={{ marginTop: '50px', fontSize: '0.8rem', opacity: 0.7 }}>
-        Compete with friends in real-time!
       </div>
 
-      <div className="login-footer">
-        <Link to="/privacy">Privacy Policy</Link>
-        <span>•</span>
-        <Link to="/terms">Terms of Service</Link>
+      <div className="landing-content-section">
+        <div className="auth-container">
+          <h1 className="landing-title">RBL Games</h1>
+          <p className="landing-description">
+            Welcome to RBL Games, the ultimate destination for real-time multiplayer arcade fun.
+            Compete against friends in exciting mini-games, climb the global leaderboards, and show off your skills.
+            Join a room or create your own to start the party anytime, anywhere!
+          </p>
+
+          <div style={{ marginBottom: '20px', width: '100%' }}>
+            {(loginError || error) && (
+              <div style={{
+                color: '#ff6b6b',
+                marginBottom: '20px',
+                padding: '10px',
+                background: 'rgba(255,107,107,0.1)',
+                borderRadius: '8px'
+              }}>
+                {loginError || error}
+              </div>
+            )}
+
+            <button
+              className="btn-social btn-google"
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              style={{ opacity: loading ? 0.7 : 1 }}
+            >
+              {loading ? 'Logging in...' : 'Continue with Google'}
+            </button>
+
+            <button
+              className="btn-social btn-apple"
+              onClick={handleAppleLogin}
+              disabled={loading}
+              style={{ opacity: loading ? 0.7 : 1 }}
+            >
+              {loading ? 'Logging in...' : 'Continue with Apple'}
+            </button>
+
+            <button
+              className="btn-social btn-fb"
+              onClick={handleFacebookLogin}
+              disabled={loading}
+              style={{ opacity: loading ? 0.7 : 1 }}
+            >
+              {loading ? 'Logging in...' : 'Continue with Facebook'}
+            </button>
+
+            <button
+              className="btn-social btn-guest"
+              onClick={handleGuestLogin}
+            >
+              Continue as Guest
+            </button>
+          </div>
+
+          <div className="login-footer">
+            <Link to="/privacy">Privacy Policy</Link>
+            <span>•</span>
+            <Link to="/terms">Terms of Service</Link>
+          </div>
+        </div>
       </div>
     </div>
   );
