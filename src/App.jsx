@@ -31,7 +31,11 @@ const USER_STORAGE_KEY = 'rbl_user';
 const Ornaments = () => {
   const colors = ['purple', 'blue', 'yellow', 'pink'];
   const balloons = [];
-  const totalBalloons = 120;
+
+  // Reduce ornaments on mobile for performance
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 900;
+  const totalBalloons = isMobile ? 30 : 120;
+  const totalConfetti = isMobile ? 20 : 80;
 
   for (let i = 0; i < totalBalloons; i++) {
     balloons.push({
@@ -45,7 +49,7 @@ const Ornaments = () => {
     });
   }
 
-  const confetti = Array.from({ length: 80 }).map((_, i) => ({
+  const confetti = Array.from({ length: totalConfetti }).map((_, i) => ({
     id: `confetti-${i}`,
     left: `${Math.random() * 100}%`,
     top: `${Math.random() * 100}%`,

@@ -68,6 +68,7 @@ const Login = ({ onLogin, pendingRoomCode }) => {
             allowFullScreen={true}
             allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
             title="RBL Games Showcase"
+            loading="lazy"
           ></iframe>
         </div>
       </div>
@@ -103,6 +104,7 @@ const Login = ({ onLogin, pendingRoomCode }) => {
               {loading ? 'Logging in...' : 'Continue with Google'}
             </button>
 
+            {/* Apple login hidden for now
             <button
               className="btn-social btn-apple"
               onClick={handleAppleLogin}
@@ -111,6 +113,7 @@ const Login = ({ onLogin, pendingRoomCode }) => {
             >
               {loading ? 'Logging in...' : 'Continue with Apple'}
             </button>
+            */}
 
             <button
               className="btn-social btn-fb"

@@ -212,6 +212,7 @@ export default function UpgradePopup({
                 >
                   {loginLoading ? '...' : 'Google'}
                 </button>
+                {/* Apple login hidden for now
                 <button
                   className="login-btn login-btn-apple"
                   onClick={() => handleSignIn('apple')}
@@ -219,6 +220,7 @@ export default function UpgradePopup({
                 >
                   {loginLoading ? '...' : 'Apple'}
                 </button>
+                */}
                 <button
                   className="login-btn login-btn-facebook"
                   onClick={() => handleSignIn('facebook')}
