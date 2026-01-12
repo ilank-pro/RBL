@@ -642,8 +642,9 @@ body {
 /* Timer area */
 .timer-area {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
+  justify-content: center;
   padding: 8px 0;
   flex-shrink: 0;
 }
@@ -677,6 +678,70 @@ body {
 .clock-icon {
   width: 22px;
   height: 22px;
+}
+
+/* Extend time button */
+.extend-time-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-left: 10px;
+}
+
+.extend-time-btn {
+  background: linear-gradient(135deg, #d4a827 0%, #b8941f 100%);
+  border: 2px solid #1a1a2e;
+  border-radius: 12px;
+  color: #1a1a2e;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.2s;
+  white-space: nowrap;
+}
+
+.extend-time-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #e5b930 0%, #c9a422 100%);
+}
+
+.extend-time-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Extend time tooltip */
+.extend-time-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.95);
+  border: 1px solid var(--accent-yellow);
+  border-radius: 8px;
+  padding: 8px 12px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s, visibility 0.2s;
+  z-index: 100;
+  font-size: 0.85rem;
+  color: white;
+}
+
+.extend-time-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--accent-yellow);
+}
+
+.extend-time-wrapper:hover .extend-time-tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* Control buttons */

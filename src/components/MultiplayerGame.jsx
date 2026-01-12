@@ -451,6 +451,33 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
     setShowEmojiPicker(false);
   };
 
+  const handleExtendTime = async () => {
+    if (userCoins < 10) {
+      setUpgradePopupTrigger('hint');
+      setShowUpgradePopup(true);
+      return;
+    }
+
+    try {
+      const result = await spendCoinsMutation({
+        userId: user.userId,
+        amount: 10,
+        reason: 'extend_time',
+      });
+
+      if (result.success) {
+        setTimeLeft(prev => prev + 10);
+        setRoundFeedback('-10 coins for +10s');
+        setTimeout(() => setRoundFeedback(null), 1500);
+      } else {
+        setUpgradePopupTrigger('hint');
+        setShowUpgradePopup(true);
+      }
+    } catch (err) {
+      console.error('Failed to extend time:', err);
+    }
+  };
+
   if (!gameState || !currentItem) {
     return (
       <div className="game-container">
@@ -567,6 +594,18 @@ const MultiplayerGame = ({ roomId, user, isHost, onGameEnd }) => {
             </svg>
           </div>
           {formatTime(timeLeft)}
+        </div>
+        <div className="extend-time-wrapper">
+          <button
+            className="extend-time-btn"
+            onClick={handleExtendTime}
+            disabled={userCoins < 10 || timeLeft === null}
+          >
+            +10s
+          </button>
+          <div className="extend-time-tooltip">
+            Extend time by 10 seconds (10 coins)
+          </div>
         </div>
       </div>
 
