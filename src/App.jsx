@@ -278,29 +278,30 @@ function AppContent() {
     setScreen(SCREENS.RESULTS);
   };
 
-  const handlePlayAgain = () => {
-    setRoomId(null);
-    setRoomCode(null);
-    setIsHost(false);
+  const handlePlayAgain = (newRoomId, newRoomCode) => {
+    // Host creates rematch room and goes to waiting screen
+    setRoomId(newRoomId);
+    setRoomCode(newRoomCode);
+    setIsHost(true);
     setGameResults(null);
-    setScreen(SCREENS.LOBBY);
+    setScreen(SCREENS.WAITING);
   };
 
-  const handleExit = async () => {
+  const handleAcceptRematch = (newRoomId) => {
+    // Opponent accepts rematch and joins the new room
+    setRoomId(newRoomId);
+    setIsHost(false);
+    setGameResults(null);
+    setScreen(SCREENS.WAITING);
+  };
+
+  const handleExit = () => {
     setRoomId(null);
     setRoomCode(null);
     setIsHost(false);
     setGameResults(null);
-    setUser(null);
-    // Clear session from localStorage
-    localStorage.removeItem(USER_STORAGE_KEY);
-    // Sign out from Firebase
-    try {
-      await signOut();
-    } catch (err) {
-      console.error('Sign out error:', err);
-    }
-    setScreen(SCREENS.LOGIN);
+    // Return to lobby without logging out
+    setScreen(SCREENS.LOBBY);
     navigate('/');
   };
 
@@ -362,7 +363,9 @@ function AppContent() {
             isHost={isHost}
             roomId={roomId}
             userId={user?.userId}
+            userProvider={user?.provider}
             onPlayAgain={handlePlayAgain}
+            onAcceptRematch={handleAcceptRematch}
             onExit={handleExit}
           />
         );

@@ -241,3 +241,74 @@ export const getUser = query({
     return await ctx.db.get(args.userId);
   },
 });
+
+// Create a rematch room with same settings as original room
+export const createRematchRoom = mutation({
+  args: {
+    originalRoomId: v.id("rooms"),
+  },
+  handler: async (ctx, args) => {
+    const originalRoom = await ctx.db.get(args.originalRoomId);
+    if (!originalRoom) throw new Error("Room not found");
+
+    // Generate unique room code
+    let code = generateRoomCode();
+    let existing = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) => q.eq("code", code))
+      .first();
+
+    while (existing) {
+      code = generateRoomCode();
+      existing = await ctx.db
+        .query("rooms")
+        .withIndex("by_code", (q) => q.eq("code", code))
+        .first();
+    }
+
+    // Get active puzzles from database
+    const activePuzzles = await ctx.db
+      .query("puzzles")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .collect();
+
+    const puzzleCount = activePuzzles.length > 0 ? activePuzzles.length : 59;
+
+    // Create shuffled puzzle order
+    const puzzleIndices = Array.from({ length: puzzleCount }, (_, i) => i);
+    const puzzleOrder = shuffleArray(puzzleIndices).slice(0, originalRoom.totalRounds);
+
+    // Create new room with same settings as original
+    const newRoomId = await ctx.db.insert("rooms", {
+      code,
+      hostId: originalRoom.hostId,
+      status: "waiting",
+      currentPuzzleIndex: 0,
+      puzzleOrder,
+      hostScore: 0,
+      guestScore: 0,
+      totalRounds: originalRoom.totalRounds,
+      timePerCard: originalRoom.timePerCard || 90,
+      createdAt: Date.now(),
+    });
+
+    // Link original room to rematch room so opponent can see invitation
+    await ctx.db.patch(args.originalRoomId, {
+      rematchRoomId: newRoomId,
+      rematchRoomCode: code,
+    });
+
+    return { roomId: newRoomId, code };
+  },
+});
+
+// Decline a rematch invitation (clears rematchRoomId)
+export const declineRematch = mutation({
+  args: { roomId: v.id("rooms") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.roomId, {
+      rematchRoomId: undefined,
+    });
+    return true;
+  },
+});

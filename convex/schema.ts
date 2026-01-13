@@ -77,6 +77,9 @@ export default defineSchema({
     // Hint tracking per game
     hostHintsUsed: v.optional(v.number()),
     guestHintsUsed: v.optional(v.number()),
+    // Rematch fields
+    rematchRoomId: v.optional(v.id("rooms")), // Reference to new rematch room
+    rematchRoomCode: v.optional(v.string()), // Code of the rematch room for easy joining
   }).index("by_code", ["code"]),
 
   rounds: defineTable({
