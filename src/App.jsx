@@ -305,6 +305,24 @@ function AppContent() {
     navigate('/');
   };
 
+  const handleLogout = async () => {
+    setRoomId(null);
+    setRoomCode(null);
+    setIsHost(false);
+    setGameResults(null);
+    setUser(null);
+    // Clear session from localStorage
+    localStorage.removeItem(USER_STORAGE_KEY);
+    // Sign out from Firebase
+    try {
+      await signOut();
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
+    setScreen(SCREENS.LOGIN);
+    navigate('/');
+  };
+
   // Show loading while restoring session
   if (isRestoring) {
     return (
@@ -328,7 +346,7 @@ function AppContent() {
             user={user}
             onRoomCreated={handleRoomCreated}
             onRoomJoined={handleRoomJoined}
-            onLogout={handleExit}
+            onLogout={handleLogout}
           />
         );
 
